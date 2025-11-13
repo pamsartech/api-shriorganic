@@ -1,7 +1,5 @@
 
 
-
-
 /*---------------------------------------------
         1) to get all the users in the server
 ----------------------------------------------- */
@@ -13,3 +11,4 @@ export const getallusers=async (req,res) => {
         message:"to get all the users "
     })
 }
+
