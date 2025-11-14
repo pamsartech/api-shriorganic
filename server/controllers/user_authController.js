@@ -10,7 +10,6 @@ export const signin = async (req, res) => {
     try {
         
         const { Email, Password } = req.body;
-
         const user = await User.find({ Email: Email });
 
         if (!user || user.length === 0) {
@@ -20,7 +19,6 @@ export const signin = async (req, res) => {
         });
         }
         const hashedPassword = user[0].Password;
-
         const isMatch = await bcrypt.compare(Password, hashedPassword);
 
         if (!isMatch) {
@@ -29,20 +27,13 @@ export const signin = async (req, res) => {
             message: "Password incorrect!"
         });
         }
-
         else{
-
             return res.status(200).json({
                 success: true,
                 message: "sigin successful"
             });
         }
-
-
-    } catch (error) {
-        
-        console.log("Loign Error",error);
-        
+    } catch (error) {        
         res.status(400).json({
             success:false,
             message:"signin failed",
@@ -58,9 +49,7 @@ export const signin = async (req, res) => {
 
 export const signup = async (req, res) => {
 
-    try {
-        
-    
+    try {    
     const { FirstName, LastName, PhoneNumber, Email, Password } = req.body;
     if (!FirstName || !LastName || !PhoneNumber || !Email || !Password) {
         return res.status(400).json({
@@ -68,18 +57,12 @@ export const signup = async (req, res) => {
             message: "Required data is missing."
         });
     }
-
-
     const existingUser = await User.findOne({
         $or: [{ Email: Email.toLowerCase() }, { PhoneNumber }],
     });
-
-
     const salt=Number(process.env.saltRounds);
     const encryptedpassword=await bcrypt.hash(Password,salt);
 
-
-    
     const userdata = {
         FirstName: FirstName,
         LastName: LastName,
@@ -89,27 +72,22 @@ export const signup = async (req, res) => {
     }
 
     if(existingUser){
-
         res.status(401).json({
             success:false,
             message:"user already exists with email or number !"
         })
     }
     else{
-
         const newUser=new User(
             userdata
         )
-
         await newUser.save();
     }
-
     res.status(200).json({
         success: true,
         message: "sign-up sucessfull !",
     })
 } catch (error) {
-        
     res.status(400).json({
         success:false,
         message:"error",
