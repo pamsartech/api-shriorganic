@@ -3,6 +3,7 @@ import bcrypt, { hash } from 'bcrypt';
 import jwt from "jsonwebtoken";
 
 
+
 /*--------------------------------
         1) user sign in page
 ---------------------------------*/
@@ -28,19 +29,24 @@ export const signin = async (req, res) => {
             message: "Password incorrect!"
         });
         }
-        // else{
-
+        else{
             const payload={
-                _id:user._id,
-                Email:user.Email,
+                _id:user[0]._id,
+                Email:user[0].Email,
             }
             const token=jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
-            return res.status(200).json({
+
+            res.cookie('token',token,{
+                httpOnly: true, // not accessible via JavaScript
+                secure: process.env.NODE_ENV === 'production', // only over HTTPS in prod
+                sameSite: 'strict',
+                maxAge: 7*24*60 * 60 * 1000 // 7 days
+            }).status(200).json({
                 success: true,
                 message: "sigin successful",
                 token:token
             });
-        // }
+        }
     } catch (error) {        
         res.status(400).json({
             success:false,
@@ -51,9 +57,9 @@ export const signin = async (req, res) => {
 }
 
 
-/*--------------------------------
+/*-----------------------------------
        2) user sign up page
----------------------------------*/
+-------------------------------------*/
 
 export const signup = async (req, res) => {
 
@@ -105,4 +111,42 @@ export const signup = async (req, res) => {
 }
 
 
+/*-------------------------------------
+       3) To Get The DashBaord Details
+---------------------------------------*/
 
+export const dashBoard=async (req,res) => {
+
+    const user=req.user;
+
+    const userdetials=await User.find({_id:user._id}).select("-Password");
+    try {
+
+        res.status(200).json({
+            success:true,
+            data:userdetials
+        })
+    } catch (error) {
+        res.status(400).json({
+            success:false,
+            data:error
+        })
+    }
+}
+
+/*-------------------------------------
+       4) signout
+---------------------------------------*/
+
+export const signout=async (req,res) => {
+    
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+      });
+      return res.status(200).json({
+        success: true,
+        message: 'Logged out successfully'
+      });
+}

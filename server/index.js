@@ -5,7 +5,7 @@ import bodyParser from "body-parser";
 import userRoutes from "../server/routes/userRoutes.js"
 import userAuthRouters from "../server/routes/userAuthRouters.js"
 import { connectDB } from "./config/db.js";
-
+import cookieParser from "cookie-parser"
 
 dotenv.config();
 
@@ -38,10 +38,10 @@ const allowedOrigins = [
 
 app.use(cors(corsOptions))
 
-
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 
 /*-----------------------------------
