@@ -4,9 +4,6 @@ import jwt from "jsonwebtoken";
 
 
 
-/*--------------------------------
-        1) user sign in page
----------------------------------*/
 export const signin = async (req, res) => {
 
     try {
@@ -57,9 +54,6 @@ export const signin = async (req, res) => {
 }
 
 
-/*-----------------------------------
-       2) user sign up page
--------------------------------------*/
 
 export const signup = async (req, res) => {
 
@@ -111,10 +105,6 @@ export const signup = async (req, res) => {
 }
 
 
-/*-------------------------------------
-       3) To Get The DashBaord Details
----------------------------------------*/
-
 export const dashBoard=async (req,res) => {
 
     const user=req.user;
@@ -134,9 +124,7 @@ export const dashBoard=async (req,res) => {
     }
 }
 
-/*-------------------------------------
-       4) signout
----------------------------------------*/
+
 
 export const signout=async (req,res) => {
     

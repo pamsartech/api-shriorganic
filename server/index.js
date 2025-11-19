@@ -44,9 +44,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 
-/*-----------------------------------
-  basic rotue for testing the server
------------------------------------ */
+
+// basic rotue for testing the server
 app.get("/", (req, res) => {
 
     res.status(200).json({
@@ -56,25 +55,17 @@ app.get("/", (req, res) => {
 });
 
 
-/*-----------------------------------
-connecting the database
------------------------------------ */
 
+// connecting the database
 connectDB();
 
-
-/*-----------------------------------
- Server route
------------------------------------ */
-  
+//  Server route  
 app.use("/api/user",userRoutes);
 app.use("/api/auth",userAuthRouters);
 
 
-/*-----------------------------------
-            serevr listner
------------------------------------ */
 
+// server listner
 app.listen(PORT, () => {
     console.log(`Server is running on ${PORT}`);
 });

@@ -1,11 +1,9 @@
 import { User } from "../models/userModel.js";
 
 
-/*--------------------------------------------------
-       1) for tessting to get the all users data
----------------------------------------------------*/
 
 
+// To Get The all the users in admin side
 export const getusers=async(req,res)=>{
     try {
         const allUsers = await User.find({ is_deleted: false }).select("-Password");
@@ -29,11 +27,7 @@ export const getusers=async(req,res)=>{
 }
 
 
-/*--------------------------------------------------
-       2) get user details by userId
----------------------------------------------------*/
-
-
+// To get the user details by the user id
 export const getUserById=async (req,res) => {
 
     try {        
