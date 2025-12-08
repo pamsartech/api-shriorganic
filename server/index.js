@@ -10,12 +10,11 @@ import cookieParser from "cookie-parser"
 dotenv.config();
 
 
-
 const app=express();
 const PORT=process.env.PORT || 4001;
 
 
-
+// add the comment
 const allowedOrigins = [
     "*"
   ];
