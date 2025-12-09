@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import userRoutes from "../server/routes/userRoutes.js"
 import userAuthRouters from "../server/routes/userAuthRouters.js"
 import productRoutes from "./routes/productRoute.js";
+import cartRoute from "./routes/cartRoute.js"
 import { connectDB } from "./config/db.js";
 import cookieParser from "cookie-parser"
 
@@ -50,7 +51,7 @@ app.get("/", (req, res) => {
 
   res.status(200).json({
     sucess: true,
-    message: "Hello from the server , server is working"
+    message: "Hello from the server , server is working "
   })
 });
 
@@ -63,6 +64,7 @@ connectDB();
 app.use("/api/user", userRoutes);
 app.use("/api/auth", userAuthRouters);
 app.use("/api/product", productRoutes);
+app.use("/api/cart", cartRoute);
 
 
 
@@ -70,3 +72,6 @@ app.use("/api/product", productRoutes);
 app.listen(PORT, () => {
   console.log(`Server is running on ${PORT}`);
 });
+
+
+

@@ -59,6 +59,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    wallet:{
+        type: Number,
+        default: 0
+    }
 }, { timestamps: true });
 
 const counterSchema = new mongoose.Schema({
