@@ -25,10 +25,18 @@ const reviewSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    likes: [{
-        type: String,
-        ref: "User"
-    }]
+    likes: {
+        type: [{
+            type: String,
+            ref: "User"
+        }],
+        validate: {
+            validator: function (v) {
+                return new Set(v).size === v.length;
+            },
+            message: 'Duplicate likes are not allowed'
+        }
+    }
 })
 
 export default mongoose.model("Review", reviewSchema)
