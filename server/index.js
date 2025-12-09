@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import userRoutes from "../server/routes/userRoutes.js"
 import userAuthRouters from "../server/routes/userAuthRouters.js"
 import productRoutes from "./routes/productRoute.js";
+import cartRoute from "./routes/cartRoute.js"
 import { connectDB } from "./config/db.js";
 import cookieParser from "cookie-parser"
 
@@ -63,6 +64,7 @@ connectDB();
 app.use("/api/user", userRoutes);
 app.use("/api/auth", userAuthRouters);
 app.use("/api/product", productRoutes);
+app.use("/api/cart", cartRoute);
 
 
 
