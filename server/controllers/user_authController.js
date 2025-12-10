@@ -181,7 +181,7 @@ export const requestOtp = async (req, res) => {
         }
 
         user.otpHash = hashedOtp;
-        user.otpExpire = Date.now() + 5 * 60 * 1000; // 5 minutes
+        user.otpExpire = Date.now() + 5 * 60 * 1000; //
         await user.save();
 
 
