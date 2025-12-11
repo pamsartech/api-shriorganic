@@ -2,7 +2,7 @@
 import Order from "../models/OrderModel.js";
 import { sendOrderUpdateEmail } from "../utils/sendEmail.js";
 import Product from "../models/ProductModel.js";
-
+import { sendSms } from "../utils/message.js";
 
 // 1)place an order [Website]
 export const placeOrder = async (req, res) => {
@@ -10,13 +10,14 @@ export const placeOrder = async (req, res) => {
         const userId = req.user._id;
         const { cartItems, paymentMethod, address } = req.body;
 
-        // check for the cartItems are present or not 
+        
         if (!cartItems || cartItems.length === 0) {
             return res.status(400).json({
                 success: false,
                 message: "Cart is empty"
             });
-        }   
+        }  
+
         // check the stock availability
         for (let i = 0; i < cartItems.length; i++) {
             const product = await Product.findById(cartItems[i].product);
@@ -59,6 +60,7 @@ export const placeOrder = async (req, res) => {
         // Send email notification (optional check if email exists in req.user, otherwise fetch user)
         if (req.user.Email) {
             await sendOrderUpdateEmail(req.user.Email, "Order Placed Successfully", `Your order with ID ${order._id} has been placed.`);
+            // await sendSms("+919666440579", "Order Placed Successfully", `Your order with ID ${order._id} has been placed.`);
         }
 
         res.status(200).json({
