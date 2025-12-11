@@ -7,6 +7,8 @@ import userAuthRouters from "../server/routes/userAuthRouters.js"
 import productRoutes from "./routes/productRoute.js";
 import cartRoute from "./routes/cartRoute.js"
 import { connectDB } from "./config/db.js";
+import reviewRoute from "./routes/reviewRoute.js";
+import orderRoute from "./routes/OrderRoute.js";
 import cookieParser from "cookie-parser"
 
 dotenv.config();
@@ -65,6 +67,8 @@ app.use("/api/user", userRoutes);
 app.use("/api/auth", userAuthRouters);
 app.use("/api/product", productRoutes);
 app.use("/api/cart", cartRoute);
+app.use("/api/review",reviewRoute);
+app.use("/api/order",orderRoute);
 
 
 

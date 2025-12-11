@@ -59,9 +59,17 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    wallet:{
+    wallet: {
         type: Number,
         default: 0
+    },
+    otpHash: {
+        type: String,
+        default: null
+    },
+    otpExpire: {
+        type: Date,
+        default: null
     }
 }, { timestamps: true });
 
@@ -70,7 +78,7 @@ const counterSchema = new mongoose.Schema({
     seq: { type: Number, default: 0 }
 });
 
-const Counter=mongoose.model('Counter', counterSchema);
+const Counter = mongoose.model('Counter', counterSchema);
 
 // Custom ID generation: CC-0001 format
 userSchema.pre('save', async function (next) {

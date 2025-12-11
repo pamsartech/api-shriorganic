@@ -42,7 +42,7 @@ export const addproduct = async (req, res) => {
 export const getproduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const product = await Product.findById(id);
+        const product = await Product.findById(id).populate("reviews.user", "FirstName LastName");
 
         if (!product) {
             return res.status(404).json({
@@ -53,13 +53,13 @@ export const getproduct = async (req, res) => {
 
         const similarProducts = await Product.find({
             category: product.category,
-            _id: { $ne: product._id } 
+            _id: { $ne: product._id }
         }).limit(4);
 
         res.status(200).json({
             success: true,
-            product :product,
-            remondedProducts :similarProducts,
+            product: product,
+            remondedProducts: similarProducts,
             message: "Product fetched successfully !!"
         })
     } catch (error) {
@@ -154,3 +154,7 @@ export const searchproduct = async (req, res) => {
 
     }
 }
+
+
+
+// to check weather the Product is verifed or not
