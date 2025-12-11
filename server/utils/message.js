@@ -3,6 +3,7 @@ import twilio from "twilio";
 const client = twilio(`${process.env.TWILIO_ACCOUNT_SID}`, `${process.env.TWILIO_AUTH_TOKEN}`);
 
 // 1) send the sms
+
 export const sendSms = async (to, subject, text) => {
     try {
         const messageBody = subject ? `${subject}: ${text}` : text;
