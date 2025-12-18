@@ -21,7 +21,8 @@ const PORT = process.env.PORT || 4001;
 
 // add the comment
 const allowedOrigins = [
-  "*"
+  "*",
+   "http://localhost:5173"
 ];
 
 const corsOptions = {
