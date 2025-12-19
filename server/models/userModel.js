@@ -78,6 +78,9 @@ const userSchema = new mongoose.Schema({
     },
     referredBy: {
         type: String
+    },is_deleted:{
+        type:Boolean,
+        default:false
     }
 }, { timestamps: true });
 
