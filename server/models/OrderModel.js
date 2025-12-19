@@ -39,6 +39,10 @@ const OrderSchema = new mongoose.Schema({
         },
         deliveryDate: Date,
         deliveryAddress: String
+    },
+    is_deleted: {
+        type: Boolean,
+        default: false
     }
 })
 

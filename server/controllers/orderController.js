@@ -171,3 +171,153 @@ export const deleteOrder = async (req, res) => {
         });
     }
 }  
+
+
+// this all form the admin apis
+
+// to get all the orders for admin [Admin]
+export const getAllOrders = async (req, res) => {
+    try {
+        const orders = await Order.find({is_deleted: false });
+        res.status(200).json({
+            success: true,
+            message: "Orders fetched successfully",
+            orders: orders
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({
+            success: false,
+            message: "Failed to fetch orders",
+            error: error.message
+        });
+    }
+}   
+
+// to soft delete the order by the admin [Admin]
+export const softDeleteOrder = async (req, res) => {
+    try {
+        const orderId = req.params.orderId;
+        const order = await Order.findByIdAndUpdate(orderId, { is_deleted: true });
+        res.status(200).json({
+            success: true,
+            message: "Order soft deleted successfully"
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({
+            success: false,
+            message: "Failed to soft delete order",
+            error: error.message
+        });
+    }
+}
+
+
+// to bulk soft delete the order by the admin [Admin]
+export const bulkSoftDeleteOrder = async (req, res) => {
+    try {
+        const orderIds = req.body.orderIds;
+        const orders = await Order.updateMany({ _id: { $in: orderIds } }, { is_deleted: true });
+        res.status(200).json({
+            success: true,
+            message: "Orders soft deleted successfully"
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({
+            success: false,
+            message: "Failed to soft delete orders",
+            error: error.message
+        });
+    }
+}   
+
+// to hard delete the order by the admin [Admin]
+
+export const hardDeleteOrder = async (req, res) => {
+    try {
+        const orderId = req.params.orderId;
+        const order = await Order.findByIdAndDelete(orderId);
+        res.status(200).json({
+            success: true,
+            message: "Order hard deleted successfully"
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({
+            success: false,
+            message: "Failed to hard delete order",
+            error: error.message
+        });
+    }
+}
+
+// to get order by id [Admin]
+
+export const getOrderById = async (req, res) => {
+    try {
+        const orderId = req.params.orderId;
+        const order = await Order.findById(orderId);
+        res.status(200).json({
+            success: true,
+            message: "Order fetched successfully",
+            order: order
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({
+            success: false,
+            message: "Failed to fetch order",
+            error: error.message
+        });
+    }
+}
+
+// update order by id [Admin]
+
+export const updateOrderById = async (req, res) => {
+    try {
+        const orderId = req.params.orderId;
+        const order = await Order.findByIdAndUpdate(orderId, req.body, { new: true });
+        res.status(200).json({
+            success: true,
+            message: "Order updated successfully",
+            order: order
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({
+            success: false,
+            message: "Failed to update order",
+            error: error.message
+        });
+    }
+}   
+
+
+// search order by id [Admin]
+
+export const searchOrderById = async (req, res) => {
+    try {
+        const orderId = req.params.orderId;
+        const order = await Order.findById(orderId);
+        res.status(200).json({
+            success: true,
+            message: "Order fetched successfully",
+            order: order
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({
+            success: false,
+            message: "Failed to fetch order",
+            error: error.message
+        });
+    }
+}
+
+
+
+
+
