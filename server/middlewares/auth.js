@@ -1,13 +1,13 @@
-import  jwt  from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 
 
-export const authMiddelware=(req,res,next)=>{
+export const authMiddelware = (req, res, next) => {
 
     let token;
 
-    if (!token && req.cookies && req.cookies.token) {
-        token = req.cookies.token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
     }
 
     if (!token) {
@@ -17,7 +17,7 @@ export const authMiddelware=(req,res,next)=>{
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded; // Attach the payload to req.user
         next();
-      } catch (err) {
+    } catch (err) {
         return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
     }
 }

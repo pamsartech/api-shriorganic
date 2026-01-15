@@ -7,6 +7,9 @@ const router = express.Router();
 router.get("/", getusers);
 router.get("/:userId", getUserById);
 router.put("/:userId", updateUser);
+
+
+//has to move to admin side
 router.delete("/:userId", deleteUser);
 router.delete("/soft/:userId", softDeleteUser);
 router.put("/active/:userId", makeUserActive);

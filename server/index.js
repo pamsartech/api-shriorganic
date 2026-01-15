@@ -11,6 +11,7 @@ import reviewRoute from "./routes/reviewRoute.js";
 import orderRoute from "./routes/OrderRoute.js";
 import notifyRoute from "./routes/notifyRoute.js";
 import cookieParser from "cookie-parser"
+import walletRoute from "./routes/WalletRoute.js";
 
 dotenv.config();
 
@@ -72,6 +73,7 @@ app.use("/api/cart", cartRoute);
 app.use("/api/review", reviewRoute);
 app.use("/api/order", orderRoute);
 app.use("/api/notify", notifyRoute)
+app.use("/api/wallet", walletRoute)
 
 
 

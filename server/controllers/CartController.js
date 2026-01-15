@@ -8,7 +8,7 @@ export const addproducttocart = async (req, res) => {
 
     try {
 
-        const { productId } = req.body;
+        const { productId } = req.params;
         const user = await User.findById(req.user._id);
 
         if (!user) {
@@ -110,7 +110,7 @@ export const getcart = async (req, res) => {
 export const removeproduct = async (req, res) => {
 
     try {
-        const { productId } = req.body;
+        const { productId } = req.params;
         const user = await User.findById(req.user._id);
         if (!user) {
             return res.status(404).json({
@@ -125,6 +125,8 @@ export const removeproduct = async (req, res) => {
                 cart: { cartItems: [], totalAmount: 0 }
             })
         }
+        const prodcut=await Product.findById(productId);
+        
         cart.cartItems = cart.cartItems.filter(item => item.product._id.toString() !== productId);
 
         cart.totalAmount = cart.cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
@@ -132,9 +134,9 @@ export const removeproduct = async (req, res) => {
 
         res.status(200).json({
             sucess: true,
-            message:"remove the product !"
+            message:`${prodcut.name} remove the product !`
         })
-
+        
     } catch (error) {
         res.status(400).json({
             sucess: false,

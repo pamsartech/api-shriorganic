@@ -1,4 +1,5 @@
 import { User } from "../models/userModel.js";
+import { Wallet } from "../models/walletModel.js";
 import bcrypt, { hash } from 'bcrypt';
 import jwt from "jsonwebtoken";
 import { sendSigninEmail, sendRegisterEmail, sendLogoutEmail } from "../utils/sendEmail.js";
@@ -37,12 +38,7 @@ export const signin = async (req, res) => {
             const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
 
 
-            res.cookie('token', token, {
-                httpOnly: true, // not accessible via JavaScript
-                secure: process.env.NODE_ENV === 'production', // only over HTTPS in prod
-                sameSite: 'strict',
-                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-            }).status(200).json({
+            res.status(200).json({
                 success: true,
                 message: "sigin successful",
                 token: token
@@ -92,33 +88,81 @@ export const signup = async (req, res) => {
         if (referralCode) {
             const referrer = await User.findOne({ referralCode: referralCode });
             if (referrer) {
-                referrer.wallet += 100;
-                await referrer.save();
+                let referrerWallet = await Wallet.findOne({ user: referrer._id });
+                if (!referrerWallet) {
+                    referrerWallet = new Wallet({
+                        user: referrer._id,
+                        balance: 0,
+                        transactions: []
+                    });
+                }
+
+                referrerWallet.balance += 100;
+                referrerWallet.transactions.push({
+                    type: "deposit",
+                    amount: 100,
+                    description: "Referral Bonus",
+                    referenceId: "REF_BONUS_" + Date.now(),
+                    status: "completed"
+                });
+                await referrerWallet.save();
+
+                if (!referrer.wallet) {
+                    referrer.wallet = referrerWallet._id;
+                    await referrer.save();
+                }
                 userdata.referredBy = referrer.referralCode;
             }
         }
 
         if (existingUser) {
-            res.status(401).json({
+            return res.status(401).json({
                 success: false,
                 message: "user already exists with email or number !"
             })
         }
-        else {
-            const newUser = new User(
-                userdata
-            )
-            await newUser.save();
+
+        const newUser = new User(userdata);
+        await newUser.save();
+
+        let walletData = {
+            user: newUser._id,
+        };
+
+        if (userdata.referredBy) {
+            walletData.balance = 100;
+            walletData.transactions = [{
+                type: "deposit",
+                amount: 100,
+                description: "Referral Bonus (Welcome Gift)",
+                referenceId: "WELCOME_BONUS_" + Date.now(),
+                status: "completed"
+            }];
         }
+
+        const newWallet = new Wallet(walletData);
+
+        await newWallet.save();
+        newUser.wallet = newWallet._id;
+        await newUser.save();
+
+        const payload = {
+            _id: newUser._id,
+            Email: newUser.Email,
+        }
+
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
+
+        res.status(200).json({
+            success: true,
+            message: "sign-up sucessfull !",
+            token: token
+        })
 
         // has to chnage the subject and context
         await sendRegisterEmail(Email,
             "Registration Successfull",
             "You have successfully registered");
-        res.status(200).json({
-            success: true,
-            message: "sign-up sucessfull !",
-        })
     } catch (error) {
         res.status(400).json({
             success: false,
@@ -134,7 +178,7 @@ export const dashBoard = async (req, res) => {
 
     const user = req.user;
 
-    const userdetials = await User.find({ _id: user._id }).select("-Password");
+    const userdetials = await User.find({ _id: user._id }).select("-Password").populate("wallet");
     try {
 
         res.status(200).json({
@@ -200,7 +244,8 @@ export const requestOtp = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "OTP Sent Successfully !"
+            message: "OTP Sent Successfully !",
+            otp: otp
         })
 
     } catch (error) {

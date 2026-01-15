@@ -38,7 +38,8 @@ export const addreveiw = async (req, res) => {
             user: userId,
             name: user.FirstName,
             rating: rating,
-            comment: message
+            comment: message,
+            reviewId: review._id
         });
         await product.save();
 
@@ -62,6 +63,8 @@ export const editreview = async (req, res) => {
     try {
 
         const { reviewId } = req.params;
+        const { message, rating } = req.body;
+        const userId = req.user._id;
 
         const review = await Review.findById(reviewId);
         if (!review) {
@@ -71,9 +74,27 @@ export const editreview = async (req, res) => {
             })
         }
 
-        review.message = req.body.message;
-        review.rating = req.body.rating;
+        // Check ownership
+        if (review.user.toString() !== userId.toString()) {
+            return res.status(401).json({
+                success: false,
+                message: "You are not authorized to edit this review"
+            });
+        }
+
+        if (message) review.message = message;
+        if (rating) review.rating = rating;
         await review.save();
+
+        const product = await Product.findById(review.product);
+        if (product) {
+            const reviewIndex = product.reviews.findIndex((r) => r.user.toString() === userId.toString());
+            if (reviewIndex !== -1) {
+                if (message) product.reviews[reviewIndex].comment = message;
+                if (rating) product.reviews[reviewIndex].rating = rating;
+                await product.save();
+            }
+        }
 
         res.status(200).json({
             success: true,
@@ -94,21 +115,70 @@ export const editreview = async (req, res) => {
 
 export const deleteReview = async (req, res) => {
     try {
-        const { reviewId } = req.params;
-        const review = await Review.findById(reviewId);
-        if (!review) {
-            return res.status(404).json({
-                success: false,
-                message: "Review not found !!"
-            })
+        const { _id } = req.params;
+        console.log("Params received:", req.params);
+
+        // 1. Try to find the Review document directly
+        let review = await Review.findById(_id);
+        let product;
+
+        if (review) {
+            console.log("Review found by ID:", review._id);
+            // Review found directly. Find associated product to remove embedded entry.
+            product = await Product.findById(review.product);
+            if (product) {
+                product.reviews = product.reviews.filter(
+                    (r) => r.user.toString() !== review.user.toString()
+                );
+                await product.save();
+            }
+            await Review.findByIdAndDelete(_id);
+        } else {
+            console.log("Review NOT found by ID. Checking Product subdocuments...");
+            // 2. If not found, _id might be the subdocument ID in Product.reviews
+            product = await Product.findOne({ "reviews._id": _id });
+
+            if (product) {
+                // Find the specific subdocument
+                const reviewSubDoc = product.reviews.find(r => r._id.toString() === _id);
+
+                if (reviewSubDoc) {
+                    console.log("Found as subdocument in Product:", product._id);
+                    // Remove the review document associated with this subdoc
+                    // Try to use reviewId if it exists (new schema), otherwise match by user+product (legacy)
+                    if (reviewSubDoc.reviewId) {
+                        await Review.findByIdAndDelete(reviewSubDoc.reviewId);
+                    } else {
+                        // Fallback for old data: delete by user and product match
+                        await Review.findOneAndDelete({
+                            user: reviewSubDoc.user,
+                            product: product._id
+                        });
+                    }
+
+                    // Remove subdocument from product
+                    product.reviews = product.reviews.filter(r => r._id.toString() !== _id);
+                    await product.save();
+                } else {
+                    return res.status(404).json({
+                        success: false,
+                        message: "Review not found in product reviews"
+                    });
+                }
+            } else {
+                return res.status(404).json({
+                    success: false,
+                    message: "Review not found !!"
+                });
+            }
         }
-        await review.remove();
+
         res.status(200).json({
             success: true,
             message: "Review deleted successfully !!"
         })
     } catch (error) {
-
+        console.log(error);
         res.status(400).json({
             success: false,
             message: error.message

@@ -5,8 +5,8 @@ import { addproducttocart, getcart, removeproduct } from "../controllers/CartCon
 
 const router=express.Router();
 
-router.post("/add",authMiddelware,addproducttocart);
+router.post("/add/:productId",authMiddelware,addproducttocart);
 router.get("/",authMiddelware,getcart);
-router.post("/remove",authMiddelware,removeproduct)
+router.post("/remove/:productId",authMiddelware,removeproduct)
 
 export default router;

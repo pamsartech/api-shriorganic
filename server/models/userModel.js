@@ -59,10 +59,6 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    wallet: {
-        type: Number,
-        default: 0
-    },
     otpHash: {
         type: String,
         default: null
@@ -78,9 +74,14 @@ const userSchema = new mongoose.Schema({
     },
     referredBy: {
         type: String
-    },is_deleted:{
-        type:Boolean,
-        default:false
+    },
+    wallet: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Wallet"
+    },
+    is_deleted: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

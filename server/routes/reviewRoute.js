@@ -7,7 +7,7 @@ const router=express.Router();
 
 router.post("/add",authMiddelware,addreveiw);
 router.put("/edit/:reviewId",authMiddelware,editreview);
-router.delete("/delete/:reviewId",authMiddelware,deleteReview);
+router.delete("/delete/:_id",authMiddelware,deleteReview);
 router.put("/like/:reviewId",likeReview);
 router.get("/:reviewId",showReview);
 router.put("/dislike/:reviewId",dislikeReview); 
