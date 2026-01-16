@@ -3,7 +3,7 @@ import { Wallet } from "../models/walletModel.js";
 import bcrypt, { hash } from 'bcrypt';
 import jwt from "jsonwebtoken";
 import { sendSigninEmail, sendRegisterEmail, sendLogoutEmail } from "../utils/sendEmail.js";
-
+import redisClient from "../config/redisClient.js";
 
 
 
@@ -173,25 +173,67 @@ export const signup = async (req, res) => {
 }
 
 
-// dashboard
-export const dashBoard = async (req, res) => {
+// dashboard 
+// export const dashBoard = async (req, res) => {
 
+//     const user = req.user;
+
+//     const userdetials = await User.find({ _id: user._id }).select("-Password").populate("wallet");
+//     try {
+
+//         res.status(200).json({
+//             success: true,
+//             data: userdetials
+//         })
+//     } catch (error) {
+//         res.status(400).json({
+//             success: false,
+//             data: error
+//         })
+//     }
+// }
+
+
+export const dashBoard = async (req, res) => {
+  try {
     const user = req.user;
 
-    const userdetials = await User.find({ _id: user._id }).select("-Password").populate("wallet");
-    try {
+    const cacheKey = `dashboard:${user._id}`;
 
-        res.status(200).json({
-            success: true,
-            data: userdetials
-        })
-    } catch (error) {
-        res.status(400).json({
-            success: false,
-            data: error
-        })
+    const cachedData = await redisClient.get(cacheKey);
+
+    if (cachedData) {
+
+      return res.status(200).json({
+        success: true,
+        data: JSON.parse(cachedData),
+        source: "redis"
+      });
     }
-}
+
+    const userdetails = await User.findById(user._id)
+      .select("-Password")
+      .populate("wallet");
+
+    await redisClient.setEx(
+      cacheKey,
+      200, 
+      JSON.stringify(userdetails)
+    );
+
+    res.status(200).json({
+      success: true,
+      data: userdetails,
+      source: "database"
+    });
+
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
 
 
 

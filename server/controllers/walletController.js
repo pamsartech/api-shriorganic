@@ -1,4 +1,5 @@
 import { Wallet } from "../models/walletModel.js";
+import redisClient from "../config/redisClient.js";
 
 // to add money in wallet
 export const addMoney = async (req, res) => {
@@ -53,6 +54,18 @@ export const addMoney = async (req, res) => {
 // to get the wallet details
 export const getWallet = async (req, res) => {
     try {
+        const cacheKey = `wallet:${req.user._id}`;
+
+        const cachedWallet = await redisClient.get(cacheKey);
+
+        if (cachedWallet) {
+            return res.status(200).json({
+                sucess: true,
+                message: "Wallet details",
+                wallet: JSON.parse(cachedWallet)
+            });
+        }
+
         const userId = req.user._id;
         const wallet = await Wallet.findOne({ user: userId });
         if (!wallet) {
@@ -66,6 +79,12 @@ export const getWallet = async (req, res) => {
             message: "Wallet details",
             wallet
         });
+
+        await redisClient.setEx(
+            cacheKey,
+            3600,
+            JSON.stringify(wallet)
+        );
     } catch (error) {
         res.status(400).json({
             sucess: false,

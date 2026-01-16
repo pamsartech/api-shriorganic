@@ -53,7 +53,7 @@ app.use(cookieParser());
 
 // basic rotue for testing the server
 app.get("/", (req, res) => {
-
+  
   res.status(200).json({
     sucess: true,
     message: "Hello from the server , server is working "
@@ -64,6 +64,7 @@ app.get("/", (req, res) => {
 
 // connecting the database
 connectDB();
+
 
 //  Server route  
 app.use("/api/user", userRoutes);
