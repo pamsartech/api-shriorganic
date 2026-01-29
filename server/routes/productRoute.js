@@ -9,6 +9,8 @@ import upload from "../middlewares/multer.js";
 const router = express.Router();
 
 router.get("/", getallproducts);
+router.get("/best-selling-products", getBestSellingProducts);
+router.get("/active-products", getActiveProducts);
 router.get("/:id", getproduct);
 
 
@@ -17,8 +19,6 @@ router.post("/new", upload.array("images", 10), addproduct);
 router.put("/:id", updateproduct);
 router.delete("/bulk-delete", bulkDeleteProduct);
 router.delete("/:id", deleteproduct);
-router.get("/best-selling-products", getBestSellingProducts);
-router.get("/active-products", getActiveProducts);
 router.get("/search/:keyword", searchproduct);
 router.delete("/hard-delete/:id", deleteHardDeletedProducts);
 router.get("/soft-delete/:id", softDeleteProduct);
