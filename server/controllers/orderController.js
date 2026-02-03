@@ -127,11 +127,6 @@ export const placeOrder = async (req, res) => {
 }
 
 
-
-
-
-
-
 // 2)view all the orders of the  user  [Website]
 export const viewOrders = async (req, res) => {
     try {
@@ -376,7 +371,26 @@ export const searchOrderById = async (req, res) => {
     }
 }
 
+// to verify payment 
+export const verifyPayment = async (req, res) => {
+     const {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+  } = req.body;
 
+  const body =
+    razorpay_order_id + "|" + razorpay_payment_id;
 
+  const expectedSignature = crypto
+    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+    .update(body)
+    .digest("hex");
 
+  if (expectedSignature === razorpay_signature) {
+    res.json({ success: true });
+  } else {
+    res.status(400).json({ success: false });
+  }
+}
 

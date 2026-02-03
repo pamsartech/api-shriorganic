@@ -15,6 +15,7 @@ import walletRoute from "./routes/WalletRoute.js";
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import blogRoute from "./routes/BlogRoute.js";
 import adminProductRoutes from "./routes/adminProductRoutes.js";
+import webHookRoutes from "./routes/webhook.routes.js";
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ connectDB();
 
 
 //  Server route  
+app.use("/api/webhooks", webHookRoutes);
 app.use("/api/auth", userAuthRouters);
 app.use("/api/product", productRoutes);
 app.use("/api/cart", cartRoute);
