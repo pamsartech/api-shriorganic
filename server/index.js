@@ -25,17 +25,25 @@ const PORT = process.env.PORT || 4001;
 
 // later has to change it to the domain name
 const allowedOrigins = [
-  "*",
   "http://localhost:5173",
   "https://shri-organic.netlify.app/"
 
 ];
 
 const corsOptions = {
-  origin: true, // Allow all origins for now to fix access issues
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+    origin: (origin, callback) => {
+
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("CORS not allowed"), false);
+        }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
 };
 
 app.use(cors(corsOptions))
