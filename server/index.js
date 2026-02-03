@@ -14,6 +14,7 @@ import cookieParser from "cookie-parser"
 import walletRoute from "./routes/WalletRoute.js";
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import blogRoute from "./routes/BlogRoute.js";
+import adminProductRoutes from "./routes/adminProductRoutes.js";
 
 dotenv.config();
 
@@ -25,7 +26,9 @@ const PORT = process.env.PORT || 4001;
 // later has to change it to the domain name
 const allowedOrigins = [
   "*",
-  "http://localhost:5173"
+  "http://localhost:5173",
+  "https://shri-organic.netlify.app/"
+
 ];
 
 const corsOptions = {
@@ -82,6 +85,8 @@ app.use("/api/blog", blogRoute);
 
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/admin/user", userRoutes);
+app.use("/api/admin/product", adminProductRoutes);
+
 
 
 // server listner
