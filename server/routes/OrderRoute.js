@@ -10,11 +10,6 @@ const router = express.Router();
 
 
 
-// Admin Routes
-router.get("/all-orders", getAllOrders);
-router.post("/bulk-soft-delete", bulkSoftDeleteOrder);
-router.get("/soft-delete/:orderId", softDeleteOrder);
-router.get("/hard-delete/:orderId", hardDeleteOrder);
 
 // User Routes
 router.post("/place-order", authMiddelware, placeOrder);
@@ -25,9 +20,9 @@ router.get("/orderdetails/:orderId", authMiddelware, viewOrderDetails);
 router.post("/cancel-order/:orderId", authMiddelware, cancelOrder);
 
 // Generic Routes (Must be last)
-router.get("/search/:orderId", searchOrderById);
-router.get("/:orderId", getOrderById);
-router.put("/:orderId", updateOrderById);
+router.get("/search/:orderId", authMiddelware, searchOrderById);
+router.get("/:orderId", authMiddelware, getOrderById);
+router.put("/:orderId", authMiddelware, updateOrderById);
 
 
 export default router;

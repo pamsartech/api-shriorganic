@@ -374,6 +374,15 @@ export const getOrderById = async (req, res) => {
                 message: "Invalid Order ID"
             });
         }
+        const order = await Order.findById(orderId); // Fetch the order!
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found"
+            });
+        }
+
         res.status(200).json({
             success: true,
             message: "Order fetched successfully",

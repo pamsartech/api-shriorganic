@@ -16,6 +16,7 @@ import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import blogRoute from "./routes/BlogRoute.js";
 import adminProductRoutes from "./routes/adminProductRoutes.js";
 import webHookRoutes from "./routes/webhook.routes.js";
+import adminOrdersRoutes from "./routes/adminOrdersRoutes.js";
 
 dotenv.config();
 
@@ -79,6 +80,8 @@ app.use("/api/blog", blogRoute);
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/admin/user", userRoutes);
 app.use("/api/admin/product", adminProductRoutes);
+// app.use("/api/admin/blog", adminBlogRoutes);
+app.use("/api/admin/orders", adminOrdersRoutes);
 
 
 
