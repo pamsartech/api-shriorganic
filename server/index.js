@@ -61,7 +61,6 @@ app.get("/", (req, res) => {
 
 
 // connecting the database
-// connecting the database
 connectDB();
 
 

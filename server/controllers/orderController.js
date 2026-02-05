@@ -43,11 +43,44 @@ export const placeOrder = async (req, res) => {
                     message: "Product not found"
                 });
             }
-            if (product.stock < cartItems[i].quantity) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Insufficient stock for product " + product.name
-                });
+
+            const itemSize = cartItems[i].size;
+
+            // If product interprets sizes
+            if (product.sizes && product.sizes.length > 0) {
+                if (itemSize) {
+                    const sizeInfo = product.sizes.find(s => s.size === itemSize);
+                    if (!sizeInfo) {
+                        return res.status(400).json({
+                            success: false,
+                            message: `Size ${itemSize} not found for product ${product.name}`
+                        });
+                    }
+                    if (!sizeInfo.stock) { // Assuming stock is boolean true/false for availability
+                        return res.status(400).json({
+                            success: false,
+                            message: `Size ${itemSize} is out of stock for product ${product.name}`
+                        });
+                    }
+                } else {
+                    // If item has no size but product requires one... strictly speaking we should block, 
+                    // but for now we might skip or check global stock if you prefer.
+                    // Let's enforce size if product has sizes.
+                    return res.status(400).json({
+                        success: false,
+                        message: `Size required for product ${product.name}`
+                    });
+                }
+            } else {
+                // Fallback for non-sized products (using global stock field if you re-enabled it or default logic)
+                // Since you commented out global stock, we might skip or rely on a different field.
+                // Assuming unlimited or relying on commented field:
+                if (product.stock !== undefined && product.stock < cartItems[i].quantity) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Insufficient stock for product " + product.name
+                    });
+                }
             }
         }
 

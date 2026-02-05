@@ -15,18 +15,19 @@ const OrderSchema = new mongoose.Schema({
                 ref: "Product"
             },
             quantity: Number,
+            size: String,
         }
     ],
     totalPrice: Number,
     orderStatus: {
         type: String,
-        default: "Processing"
+        default: "Processing" //["Processing","shipped","delivered","cancelled"]
     },
     paymentMethod: String,
     razorpayOrderId: String,
     paymentstatus: {
         type: String,
-        default: "Pending"
+        default: "Pending" //["Pending","Paid","Failed"]
     },
     address: String,
     createdAt: {
@@ -36,7 +37,7 @@ const OrderSchema = new mongoose.Schema({
     deliveryDetails: {
         deliveryStatus: {
             type: String,
-            default: "Pending"
+            default: "Pending" //["tobeshiped","shipped","delivered"]
         },
         deliveryDate: Date,
         deliveryAddress: String

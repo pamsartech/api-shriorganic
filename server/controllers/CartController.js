@@ -9,6 +9,7 @@ export const addproducttocart = async (req, res) => {
     try {
 
         const { productId } = req.params;
+        const { size } = req.body;
         const user = await User.findById(req.user._id);
 
         const cacheKey = `cart:${req.user._id}`;
@@ -27,26 +28,49 @@ export const addproducttocart = async (req, res) => {
             })
         }
 
+        // Validate size if product has sizes
+        if (product.sizes && product.sizes.length > 0) {
+            if (!size) {
+                return res.status(400).json({
+                    sucess: false,
+                    message: "Please select a size"
+                })
+            }
+            const sizeExists = product.sizes.find(s => s.size === size && s.stock === true);
+            if (!sizeExists) {
+                return res.status(400).json({
+                    sucess: false,
+                    message: "Selected size is not available"
+                })
+            }
+        }
+
         const cart = await Cart.findOne({ user: user._id });
         if (!cart) {
             const newCart = new Cart({
                 user: user._id,
                 cartItems: [{
                     product: product._id,
-                    quantity: 1
+                    quantity: 1,
+                    size: size
                 }]
             })
             await newCart.save();
         }
         else {
-            const cartItem = cart.cartItems.find(item => item.product.toString() === productId);
+            // Check if product with same ID AND same size exists
+            const cartItem = cart.cartItems.find(item =>
+                item.product.toString() === productId && item.size === size
+            );
+
             if (cartItem) {
                 cartItem.quantity += 1;
             }
             else {
                 cart.cartItems.push({
                     product: product._id,
-                    quantity: 1
+                    quantity: 1,
+                    size: size
                 })
             }
             await cart.save();
@@ -172,6 +196,8 @@ export const removeproduct = async (req, res) => {
 
         const cacheKey = `cart:${req.user._id}`;
         const { productId } = req.params;
+        const { size } = req.body;
+
         const user = await User.findById(req.user._id);
         if (!user) {
             return res.status(404).json({
@@ -188,7 +214,9 @@ export const removeproduct = async (req, res) => {
         }
         const prodcut = await Product.findById(productId);
 
-        cart.cartItems = cart.cartItems.filter(item => item.product._id.toString() !== productId);
+        cart.cartItems = cart.cartItems.filter(item =>
+            !(item.product._id.toString() === productId && (!size || item.size === size))
+        );
 
         cart.totalAmount = cart.cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
         await cart.save();
@@ -225,6 +253,8 @@ export const addquantity = async (req, res) => {
     try {
         const cacheKey = `cart:${req.user._id}`;
         const { productId } = req.params;
+        const { size } = req.body; // Extract size from body
+
         const user = await User.findById(req.user._id);
         if (!user) {
             return res.status(404).json({
@@ -240,7 +270,12 @@ export const addquantity = async (req, res) => {
             })
         }
 
-        const cartItem = cart.cartItems.find(item => item.product._id.toString() === productId);
+        // Find item by Product ID AND Size (if applicable)
+        const cartItem = cart.cartItems.find(item =>
+            item.product._id.toString() === productId &&
+            (!size || item.size === size)
+        );
+
         if (cartItem) {
             cartItem.quantity += 1;
         }
@@ -277,6 +312,8 @@ export const removequantity = async (req, res) => {
     try {
         const cacheKey = `cart:${req.user._id}`;
         const { productId } = req.params;
+        const { size } = req.body; // Extract size
+
         const user = await User.findById(req.user._id);
         if (!user) {
             return res.status(404).json({
@@ -292,7 +329,11 @@ export const removequantity = async (req, res) => {
             })
         }
 
-        const cartItemIdx = cart.cartItems.findIndex(item => item.product._id.toString() === productId);
+        const cartItemIdx = cart.cartItems.findIndex(item =>
+            item.product._id.toString() === productId &&
+            (!size || item.size === size)
+        );
+
         if (cartItemIdx > -1) {
             if (cart.cartItems[cartItemIdx].quantity > 1) {
                 cart.cartItems[cartItemIdx].quantity -= 1;

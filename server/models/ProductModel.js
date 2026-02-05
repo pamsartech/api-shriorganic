@@ -10,13 +10,13 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: [true, "Please enter product description"],
     },
-    product_description:{
-        type:String,
-        required:true
+    product_description: {
+        type: String,
+        required: true
     },
-    product_details:{
-        type:String,
-        required:true
+    product_details: {
+        type: String,
+        required: true
     },
     price: {
         type: Number,
@@ -39,12 +39,26 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: [true, "Please enter product category"],
     },
-    stock: {
-        type: Number,
-        required: [true, "Please enter product stock"],
-        maxLength: [4, "Stock cannot exceed 4 characters"],
-        default: 1,
-    },
+    // stock: {
+    //     type: Number,
+    //     required: [true, "Please enter product stock"],
+    //     maxLength: [4, "Stock cannot exceed 4 characters"],
+    //     default: 1,
+    // },
+
+    sizes: [
+        {
+            size: {
+                type: String,
+                required: true
+            },
+            stock: {
+                type: Boolean,
+                default: true
+            }
+        }
+    ],
+
     numOfReviews: {
         type: Number,
         default: 0,
@@ -97,3 +111,7 @@ const productSchema = new mongoose.Schema({
 });
 
 export default mongoose.model("Product", productSchema);
+
+// shirt
+// [x,l,m] -> size
+// [red,clo] -> var
