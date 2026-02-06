@@ -149,6 +149,7 @@ export const getproduct = async (req, res) => {
 }
 
 
+
 // to get all the products 
 export const getallproducts = async (req, res) => {
     try {
