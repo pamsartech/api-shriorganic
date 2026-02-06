@@ -17,6 +17,8 @@ import blogRoute from "./routes/BlogRoute.js";
 import adminProductRoutes from "./routes/adminProductRoutes.js";
 import webHookRoutes from "./routes/webhook.routes.js";
 import adminOrdersRoutes from "./routes/adminOrdersRoutes.js";
+import contactRoute from "./routes/contactroute.js";
+
 
 dotenv.config();
 
@@ -74,7 +76,7 @@ app.use("/api/order", orderRoute);
 app.use("/api/notify", notifyRoute)
 app.use("/api/wallet", walletRoute)
 app.use("/api/blog", blogRoute);
-
+app.use("/api/contact",contactRoute)
 
 
 app.use("/api/admin/auth", adminAuthRoutes);
