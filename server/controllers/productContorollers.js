@@ -6,9 +6,16 @@ import cloudinary from "../utils/cloudinary.js";
 export const addproduct = async (req, res) => {
     try {
         let images = [];
+        let certifiedImageFile = null;
 
-        if (req.files && req.files.length > 0) {
-            images = req.files.map((file) => file.path);
+        // Handle req.files which is now an object due to upload.fields
+        if (req.files) {
+            if (req.files.images) {
+                images = req.files.images.map((file) => file.path);
+            }
+            if (req.files.certified_image && req.files.certified_image.length > 0) {
+                certifiedImageFile = req.files.certified_image[0].path;
+            }
         }
 
         const imagesLinks = [];
@@ -22,15 +29,85 @@ export const addproduct = async (req, res) => {
             });
         }
 
+        let certifiedImageUrl = "";
+        if (certifiedImageFile) {
+            const result = await cloudinary.uploader.upload(certifiedImageFile, {
+                folder: "products/certified",
+            });
+            certifiedImageUrl = result.secure_url;
+        }
+
         req.body.images = imagesLinks;
+        if (certifiedImageUrl) {
+            req.body.certified_image = certifiedImageUrl;
+        }
+
+        // Parse sizes logic
+        if (req.body.sizes) {
+            let parsedSizes = req.body.sizes;
+
+            // 1. If it's a string, try to JSON parse it
+            if (typeof parsedSizes === 'string') {
+                try {
+                    parsedSizes = JSON.parse(parsedSizes);
+                } catch (e) {
+                    console.error("Error parsing sizes JSON:", e);
+                    // If JSON parse fails, it might be a simple comma-separated string or invalid
+                }
+            }
+
+            // 2. Handling weird frontend array formats (like ['s', 'm'] or ['true', 'true'])
+            if (typeof parsedSizes === 'object') {
+                // Convert parallel arrays (e.g. from FormData with same keys) into object array
+                // This handles cases like: sizes[size]=S&sizes[size]=M which might parse as { size: ['S', 'M'] }
+
+                // If parsedSizes is already an array of objects, we might not need to do anything, 
+                // UNLESS it's Mongoose model which expects strict clean objects.
+                // But the error is "sizes.0.size: Cast to string failed for value [ 's', 'm' ]"
+                // This implies that req.body.sizes is likely [ { size: ['s', 'm'], stock: ['true', 'true'] } ] (an array with one object containing arrays) 
+                // OR req.body.sizes is simply object { size: ['s', 'm'], ... } and it's being treated as the first element.
+
+                // Case A: req.body.sizes is an object { size: [...], stock: [...], price: [...] }
+                if (!Array.isArray(parsedSizes) && parsedSizes.size && Array.isArray(parsedSizes.size)) {
+                    const sizesList = [];
+                    const len = parsedSizes.size.length;
+                    for (let i = 0; i < len; i++) {
+                        sizesList.push({
+                            size: parsedSizes.size[i],
+                            price: parsedSizes.price && parsedSizes.price[i] ? Number(parsedSizes.price[i]) : 0,
+                            stock: parsedSizes.stock && parsedSizes.stock[i] ? parsedSizes.stock[i] : true
+                        });
+                    }
+                    parsedSizes = sizesList;
+                }
+                // Case B: req.body.sizes is an ARRAY, but the first element contains the parallel arrays
+                else if (Array.isArray(parsedSizes) && parsedSizes.length > 0 && parsedSizes[0].size && Array.isArray(parsedSizes[0].size)) {
+                    const innerObj = parsedSizes[0];
+                    const sizesList = [];
+                    const len = innerObj.size.length;
+                    for (let i = 0; i < len; i++) {
+                        sizesList.push({
+                            size: innerObj.size[i],
+                            price: innerObj.price && innerObj.price[i] ? Number(innerObj.price[i]) : 0,
+                            stock: innerObj.stock && innerObj.stock[i] ? innerObj.stock[i] : true
+                        });
+                    }
+                    parsedSizes = sizesList;
+                }
+            }
+
+            req.body.sizes = parsedSizes;
+        }
+
         const product = await Product.create(req.body);
 
         res.status(201).json({
             success: true,
             product,
-            mesaage: "Product added sucessfull !!"
+            message: "Product added successfully !!"
         });
     } catch (error) {
+        console.error(error); // Log the full error
         res.status(500).json({
             success: false,
             message: error.message,
@@ -72,16 +149,28 @@ export const getproduct = async (req, res) => {
 }
 
 
+
 // to get all the products 
 export const getallproducts = async (req, res) => {
     try {
-        const products = await Product.find();
+        const products = await Product.find()
+            .select("name images is_certified category product_description product_details sizes isActive");
+
+        const productsWithPrice = products.map(product => {
+            const productObj = product.toObject();
+            if (productObj.sizes && productObj.sizes.length > 0) {
+                productObj.price = productObj.sizes[0].price;
+            } else {
+                productObj.price = 0;
+            }
+            return productObj;
+        });
 
         res.status(200).json({
             success: true,
             message: "Products fetched successfully !!",
             totalProducts: products.length,
-            products,
+            products: productsWithPrice,
         });
 
     } catch (error) {
@@ -161,7 +250,7 @@ export const searchproduct = async (req, res) => {
 // to make the product active or inactive 
 export const changeProductStatus = async (req, res) => {
 
-    const {id}=req.params;
+    const { id } = req.params;
 
     try {
         const product = await Product.findById(id);
@@ -175,7 +264,7 @@ export const changeProductStatus = async (req, res) => {
         await product.save();
         res.status(200).json({
             success: true,
-            status:product.isActive,
+            status: product.isActive,
             message: "Product status changed successfully !!"
         })
     } catch (error) {
@@ -306,10 +395,24 @@ export const getBestSellingProducts = async (req, res) => {
 // get product for website where is active is false
 export const getActiveProducts = async (req, res) => {
     try {
-        const products = await Product.find({ isActive: true });
+        const products = await Product.find({ isActive: true })
+            .select("name images is_certified category product_description product_details sizes");
+
+        // Transform products to include a main price (from first size) for listing
+        const productsWithPrice = products.map(product => {
+            const productObj = product.toObject();
+            // Add a root 'price' for the frontend listing convenience (first size's price)
+            if (productObj.sizes && productObj.sizes.length > 0) {
+                productObj.price = productObj.sizes[0].price;
+            } else {
+                productObj.price = 0; // Or dummy value
+            }
+            return productObj;
+        });
+
         res.status(200).json({
             success: true,
-            products,
+            products: productsWithPrice,
             message: "Active products fetched successfully !!"
         })
     } catch (error) {
@@ -318,7 +421,7 @@ export const getActiveProducts = async (req, res) => {
             message: error.message,
         })
     }
-} 
+}
 
 // if the user added the product is certifred then there must be image to it 
 export const addCertifiedProduct = async (req, res) => {
@@ -335,7 +438,7 @@ export const addCertifiedProduct = async (req, res) => {
         await product.save();
         res.status(200).json({
             success: true,
-            status:product.is_certified,
+            status: product.is_certified,
             message: "Product status changed successfully !!"
         })
     } catch (error) {

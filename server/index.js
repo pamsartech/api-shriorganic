@@ -13,6 +13,15 @@ import notifyRoute from "./routes/notifyRoute.js";
 import cookieParser from "cookie-parser"
 import walletRoute from "./routes/WalletRoute.js";
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
+import blogRoute from "./routes/BlogRoute.js";
+import adminProductRoutes from "./routes/adminProductRoutes.js";
+import webHookRoutes from "./routes/webhook.routes.js";
+import adminOrdersRoutes from "./routes/adminOrdersRoutes.js";
+import contactRoute from "./routes/contactroute.js";
+import wishlistRoute from "./routes/wishlistRoute.js";
+import razorpayRoute from "./routes/razorpayRoute.js";
+import shiprocketRoute from "./routes/shiprocketRoute.js";
+
 
 dotenv.config();
 
@@ -21,29 +30,23 @@ const app = express();
 const PORT = process.env.PORT || 4001;
 
 
-// add the comment
+// later has to change it to the domain name
 const allowedOrigins = [
-  "*",
-  "http://localhost:5173"
+  "http://localhost:5173",
+  "https://shri-organic.netlify.app/"
+
 ];
 
 const corsOptions = {
-  origin: function (origin, callback) {
-
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: true, // Allow all origins to fix the "CORS not allowed" error
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
 };
 
 app.use(cors(corsOptions))
+
+app.use("/api/webhooks", webHookRoutes);
 
 app.use(express.json());
 app.use(bodyParser.json());
@@ -54,7 +57,7 @@ app.use(cookieParser());
 
 // basic rotue for testing the server
 app.get("/", (req, res) => {
-  
+
   res.status(200).json({
     sucess: true,
     message: "Hello from the server , server is working "
@@ -75,11 +78,19 @@ app.use("/api/review", reviewRoute);
 app.use("/api/order", orderRoute);
 app.use("/api/notify", notifyRoute)
 app.use("/api/wallet", walletRoute)
-
+app.use("/api/blog", blogRoute);
+app.use("/api/contact", contactRoute)
+app.use("/api/wishlist", wishlistRoute)
 
 
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/admin/user", userRoutes);
+app.use("/api/admin/product", adminProductRoutes);
+// app.use("/api/admin/blog", adminBlogRoutes);
+app.use("/api/admin/orders", adminOrdersRoutes);
+app.use("/api/admin/razorpay", razorpayRoute);
+app.use("/api/admin/shiprocket", shiprocketRoute);
+
 
 
 // server listner

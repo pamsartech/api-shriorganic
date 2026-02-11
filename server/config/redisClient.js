@@ -16,6 +16,9 @@
 
 // for cloud 
 import { createClient } from 'redis';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const redisClient = createClient({
     username: 'default',

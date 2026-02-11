@@ -47,6 +47,10 @@ const userSchema = new mongoose.Schema({
         },
         country: String
     },
+    profilePic: {
+        type: String,
+        default: ""
+    },
     isActive: {
         type: Boolean,
         default: true

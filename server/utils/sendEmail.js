@@ -16,7 +16,7 @@ const getTransporter = () => {
                 pass: process.env.EMAIL_PASSWORD
             }
         });
-    }       
+    }
     return transporter;
 };
 
@@ -124,3 +124,19 @@ export const sendProfileUpdateEmail = async (to, subject, text) => {
 }
 
 
+// 6) contact us mail
+export const sendContactUsEmail = async (to, subject, text) => {
+    try {
+        const mailOptions = {
+            from: process.env.USER_EMAIL,
+            to,
+            subject,
+            text
+        };
+
+        await getTransporter().sendMail(mailOptions);
+        console.log("Email sent successfully");
+    } catch (error) {
+        console.log(error);
+    }
+}
