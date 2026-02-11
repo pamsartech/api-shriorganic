@@ -120,7 +120,7 @@ export const createShiprocketOrderInternal = async (order) => {
             length: 10,
             breadth: 10,
             height: 10,
-            weight: totalWeight || 0.5
+            weight: totalWeight/1000 || 0.5
         };
 
         const response = await fetch(`${SHIPROCKET_API_URL}/orders/create/adhoc`, {

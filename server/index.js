@@ -21,6 +21,7 @@ import contactRoute from "./routes/contactroute.js";
 import wishlistRoute from "./routes/wishlistRoute.js";
 import razorpayRoute from "./routes/razorpayRoute.js";
 import shiprocketRoute from "./routes/shiprocketRoute.js";
+import dashboardRoute from "./routes/dashboardRoute.js";
 
 
 dotenv.config();
@@ -88,6 +89,7 @@ app.use("/api/admin/user", userRoutes);
 app.use("/api/admin/product", adminProductRoutes);
 // app.use("/api/admin/blog", adminBlogRoutes);
 app.use("/api/admin/orders", adminOrdersRoutes);
+app.use("/api/admin/dashboard", dashboardRoute);
 app.use("/api/admin/razorpay", razorpayRoute);
 app.use("/api/admin/shiprocket", shiprocketRoute);
 
