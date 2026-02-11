@@ -118,7 +118,7 @@ export const createShiprocketOrderInternal = async (order) => {
             payment_method: order.paymentMethod === "COD" ? "COD" : "Prepaid",
             sub_total: order.totalPrice,
             length: 10,
-            width: 10,
+            breadth: 10,
             height: 10,
             weight: totalWeight || 0.5
         };
