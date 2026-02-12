@@ -148,14 +148,23 @@ export const createShiprocketOrderInternal = async (order) => {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Accept": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
             },
             body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
-        console.log("Shiprocket Order Creation Response:", data);
-        return data;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            console.log("Shiprocket Order Creation Response:", data);
+            return data;
+        } else {
+            const text = await response.text();
+            console.error("Shiprocket Order Creation Error (Non-JSON):", text);
+            throw new Error(`Shiprocket returned non-JSON response: ${text.substring(0, 100)}`);
+        }
 
     } catch (error) {
         console.error("Shiprocket Internal Order Creation Error:", error);
@@ -211,17 +220,29 @@ export const createShiprocketOrder = async (req, res) => {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Accept": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
             },
             body: JSON.stringify(req.body)
         });
 
-        const data = await response.json();
-
-        res.status(response.status).json({
-            success: response.ok,
-            data
-        });
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            res.status(response.status).json({
+                success: response.ok,
+                data
+            });
+        } else {
+            const text = await response.text();
+            console.error("Shiprocket Create Order Error (Non-JSON):", text);
+            res.status(response.status).json({
+                success: false,
+                message: "Shiprocket returned non-JSON response",
+                error: text.substring(0, 200)
+            });
+        }
     } catch (error) {
         console.error("Shiprocket Create Order Error:", error);
         res.status(500).json({
@@ -252,16 +273,28 @@ export const trackShipment = async (req, res) => {
         const response = await fetch(`${SHIPROCKET_API_URL}/courier/track/shipment/${shipmentId}`, {
             method: "GET",
             headers: {
-                "Authorization": `Bearer ${token}`
+                "Accept": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
             }
         });
 
-        const data = await response.json();
-
-        res.status(response.status).json({
-            success: response.ok,
-            data
-        });
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            res.status(response.status).json({
+                success: response.ok,
+                data
+            });
+        } else {
+            const text = await response.text();
+            console.error("Shiprocket Track Error (Non-JSON):", text);
+            res.status(response.status).json({
+                success: false,
+                message: "Shiprocket returned non-JSON response",
+                error: text.substring(0, 200)
+            });
+        }
     } catch (error) {
         console.error("Shiprocket Track Error:", error);
         res.status(500).json({
@@ -284,16 +317,28 @@ export const getAllShipments = async (req, res) => {
         const response = await fetch(`${SHIPROCKET_API_URL}/shipments`, {
             method: "GET",
             headers: {
-                "Authorization": `Bearer ${token}`
+                "Accept": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
             }
         });
 
-        const data = await response.json();
-
-        res.status(response.status).json({
-            success: response.ok,
-            data
-        });
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            res.status(response.status).json({
+                success: response.ok,
+                data
+            });
+        } else {
+            const text = await response.text();
+            console.error("Shiprocket Get Shipments Error (Non-JSON):", text);
+            res.status(response.status).json({
+                success: false,
+                message: "Shiprocket returned non-JSON response",
+                error: text.substring(0, 200)
+            });
+        }
     } catch (error) {
         console.error("Shiprocket Get Shipments Error:", error);
         res.status(500).json({
