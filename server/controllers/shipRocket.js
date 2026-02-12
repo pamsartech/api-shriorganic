@@ -1,6 +1,6 @@
 import redisClient from "../config/redisClient.js";
 
-const SHIPROCKET_API_URL = "https://apiv2.shiprocket.in/v1/external";
+const SHIPROCKET_API_URL = "https://api.shiprocket.in/v1/external";
 
 /**
  * @desc    Internal helper to authenticate with Shiprocket
@@ -15,17 +15,31 @@ const authenticate = async () => {
             return null;
         }
 
-        console.log(`Attempting Shiprocket login for: ${email}`);
+        console.log(`Attempting Shiprocket login for: ${email} via ${SHIPROCKET_API_URL}`);
 
-        const response = await fetch(`${SHIPROCKET_API_URL}/auth/login`, {
+        const headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        };
+
+        let response = await fetch(`${SHIPROCKET_API_URL}/auth/login`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            },
+            headers: headers,
             body: JSON.stringify({ email, password })
         });
+
+        // Fallback for 403 Forbidden (Try apiv2 endpoint)
+        if (response.status === 403) {
+            console.warn("403 Forbidden on api.shiprocket.in, trying apiv2.shiprocket.in...");
+            const ALT_URL = "https://apiv2.shiprocket.in/v1/external";
+            response = await fetch(`${ALT_URL}/auth/login`, {
+                method: "POST",
+                headers: headers,
+                body: JSON.stringify({ email, password })
+            });
+        }
 
         const contentType = response.headers.get("content-type");
 
@@ -33,7 +47,7 @@ const authenticate = async () => {
             const errorText = await response.text();
             console.error(`Shiprocket HTTP Error: ${response.status} ${response.statusText}`);
             console.error(`Response Type: ${contentType}`);
-            console.error("Response body (first 200 chars):", errorText.substring(0, 200));
+            console.error("Response body snippet:", errorText.substring(0, 300));
             return null;
         }
 
@@ -50,8 +64,8 @@ const authenticate = async () => {
             }
         } else {
             const text = await response.text();
-            console.error("Shiprocket returned non-JSON response. This often happens if the account is not configured for API access or if the request is being blocked.");
-            console.error("Response snippet:", text.substring(0, 200));
+            console.error("Shiprocket returned non-JSON response. Check API user permissions.");
+            console.error("Response snippet:", text.substring(0, 300));
             return null;
         }
     } catch (error) {
