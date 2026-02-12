@@ -1,6 +1,8 @@
 import redisClient from "../config/redisClient.js";
+import dotenv from "dotenv";
+dotenv.config();
 
-const SHIPROCKET_API_URL = "https://api.shiprocket.in/v1/external";
+const SHIPROCKET_API_URL = "https://apiv2.shiprocket.in/v1/external";
 
 /**
  * @desc    Internal helper to authenticate with Shiprocket
