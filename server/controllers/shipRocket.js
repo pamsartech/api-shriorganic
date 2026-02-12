@@ -15,22 +15,43 @@ const authenticate = async () => {
             return null;
         }
 
+        console.log(`Attempting Shiprocket login for: ${email}`);
+
         const response = await fetch(`${SHIPROCKET_API_URL}/auth/login`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
             },
             body: JSON.stringify({ email, password })
         });
 
-        const data = await response.json();
+        const contentType = response.headers.get("content-type");
 
-        if (data.token) {
-            // Store token in Redis with an expiry (Shiprocket tokens usually last 24h)
-            await redisClient.setEx("shiprocket_token", 86400, data.token);
-            return data.token;
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Shiprocket HTTP Error: ${response.status} ${response.statusText}`);
+            console.error(`Response Type: ${contentType}`);
+            console.error("Response body (first 200 chars):", errorText.substring(0, 200));
+            return null;
+        }
+
+        if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            if (data.token) {
+                console.log("Shiprocket authenticated successfully");
+                // Store token in Redis with an expiry (Shiprocket tokens usually last 24h/10 days)
+                await redisClient.setEx("shiprocket_token", 86400, data.token);
+                return data.token;
+            } else {
+                console.error("Shiprocket login failed (JSON):", data);
+                return null;
+            }
         } else {
-            console.error("Shiprocket login failed:", data);
+            const text = await response.text();
+            console.error("Shiprocket returned non-JSON response. This often happens if the account is not configured for API access or if the request is being blocked.");
+            console.error("Response snippet:", text.substring(0, 200));
             return null;
         }
     } catch (error) {
@@ -120,7 +141,7 @@ export const createShiprocketOrderInternal = async (order) => {
             length: 10,
             breadth: 10,
             height: 10,
-            weight: totalWeight/1000 || 0.5
+            weight: totalWeight / 1000 || 0.5
         };
 
         const response = await fetch(`${SHIPROCKET_API_URL}/orders/create/adhoc`, {
