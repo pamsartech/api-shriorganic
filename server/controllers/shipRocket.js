@@ -248,6 +248,19 @@ export const createShiprocketOrder = async (req, res) => {
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
             const data = await response.json();
+
+            // Check if Shiprocket returned the "no activities found" message
+            const trackingData = data[shipmentId] || data; // Shiprocket sometimes wraps response in the shipmentId key
+
+            if (trackingData && trackingData.error && trackingData.error.includes("no activities found")) {
+                return res.status(200).json({
+                    success: true,
+                    status: "Awaiting Pickup",
+                    message: "Order has been created and AWB is assigned, but the courier has not picked up the package yet. Tracking will start once the package is scanned.",
+                    data: trackingData
+                });
+            }
+
             res.status(response.status).json({
                 success: response.ok,
                 data
