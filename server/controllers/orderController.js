@@ -212,7 +212,7 @@ export const viewOrders = async (req, res) => {
 export const viewOrderDetails = async (req, res) => {
     try {
         const orderId = req.params.orderId;
-        const order = await Order.findById(orderId).populate("cartItems.product");
+        const order = await Order.findById(orderId).populate("cartItems.product").populate("user");
         res.status(200).json({
             success: true,
             message: "Order details fetched successfully",
@@ -286,7 +286,7 @@ export const deleteOrder = async (req, res) => {
 // to get all the orders for admin [Admin]
 export const getAllOrders = async (req, res) => {
     try {
-        const orders = await Order.find({ is_deleted: false }).populate("cartItems.product");
+        const orders = await Order.find({ is_deleted: false }).populate("cartItems.product").populate("user");
         res.status(200).json({
             success: true,
             message: "Orders fetched successfully",
@@ -374,7 +374,9 @@ export const getOrderById = async (req, res) => {
                 message: "Invalid Order ID"
             });
         }
-        const order = await Order.findById(orderId).populate("cartItems.product"); // Fetch the order!
+        const order = await Order.findById(orderId)
+            .populate("cartItems.product")
+            .populate("user"); // Fetch the order with user details!
 
         if (!order) {
             return res.status(404).json({
@@ -425,7 +427,7 @@ export const updateOrderById = async (req, res) => {
 export const searchOrderById = async (req, res) => {
     try {
         const orderId = req.params.orderId;
-        const order = await Order.findById(orderId).populate("cartItems.product");
+        const order = await Order.findById(orderId).populate("cartItems.product").populate("user");
         res.status(200).json({
             success: true,
             message: "Order fetched successfully",
