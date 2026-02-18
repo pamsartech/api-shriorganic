@@ -47,7 +47,6 @@ export const verifyRazorpayPayment = async (req, res) => {
             razorpay_order_id,
             razorpay_payment_id,
             razorpay_signature,
-            orderId // Our internal DB Order ID
         } = req.body;
 
         const body = razorpay_order_id + "|" + razorpay_payment_id;
@@ -58,20 +57,6 @@ export const verifyRazorpayPayment = async (req, res) => {
             .digest("hex");
 
         if (expectedSignature === razorpay_signature) {
-            // Update order in DB
-            const order = await Order.findById(orderId);
-            if (!order) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Order not found in database"
-                });
-            }
-
-            order.paymentstatus = "Paid";
-            order.razorpayPaymentId = razorpay_payment_id;
-            order.razorpaySignature = razorpay_signature;
-            await order.save();
-
             res.status(200).json({
                 success: true,
                 message: "Payment verified successfully"

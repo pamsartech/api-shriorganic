@@ -31,15 +31,12 @@ router.post(
                     .populate("user")
                     .populate("cartItems.product");
 
-
-                    console.log(order);
+                console.log(order);
 
                 if (order) {
                     order.paymentstatus = "Paid";
                     await order.save();
                     console.log(`Order ${order._id} marked as Paid via Webhook`);
-
-
 
                     // Automatically create Shiprocket Order
                     try {
