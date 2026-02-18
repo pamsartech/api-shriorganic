@@ -1,4 +1,5 @@
 import { User } from "../models/userModel.js";
+import Order from "../models/OrderModel.js";
 import redisClient from "../config/redisClient.js";
 
 
@@ -13,25 +14,53 @@ export const getusers = async (req, res) => {
                 success: true,
                 message: "List of all the users details",
                 data: JSON.parse(cachedUsers)
-            })
+            });
         }
 
-        const allUsers = await User.find({ is_deleted: false }).select("-Password");
+        const allUsers = await User.find({ is_deleted: false }).select("-Password").lean();
 
-        await redisClient.setEx(cacheKey, 3600, JSON.stringify(allUsers));
+        // Aggregate order stats per user
+        const orderStats = await Order.aggregate([
+            { $match: { is_deleted: false, paymentstatus: "Paid" } },
+            {
+                $group: {
+                    _id: "$user",
+                    totalOrders: { $sum: 1 },
+                    totalSpend: { $sum: "$totalPrice" }
+                }
+            }
+        ]);
+
+        // Build a quick lookup map: userId -> { totalOrders, totalSpend }
+        const statsMap = {};
+        for (const stat of orderStats) {
+            statsMap[String(stat._id)] = {
+                totalOrders: stat.totalOrders,
+                totalSpend: stat.totalSpend
+            };
+        }
+
+        // Merge stats into each user
+        const enrichedUsers = allUsers.map(user => ({
+            ...user,
+            totalOrders: statsMap[String(user._id)]?.totalOrders || 0,
+            totalSpend: statsMap[String(user._id)]?.totalSpend || 0
+        }));
+
+        await redisClient.setEx(cacheKey, 3600, JSON.stringify(enrichedUsers));
         res.status(200).json({
             success: true,
             message: "List of all the users details",
-            data: allUsers
-        })
+            data: enrichedUsers
+        });
 
     } catch (error) {
 
-        res.status(404).json({
+        res.status(500).json({
             success: false,
             error: error,
             message: "failed to fetch the users !!"
-        })
+        });
     }
 
 }
