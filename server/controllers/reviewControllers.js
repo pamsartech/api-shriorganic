@@ -2,6 +2,16 @@ import Review from "../models/reviewModel.js";
 import Product from "../models/ProductModel.js";
 import { User } from "../models/userModel.js";
 
+// Helper: recalculate and persist ratings + numOfReviews from the reviews array
+const syncProductRatings = async (product) => {
+    const reviews = product.reviews || [];
+    product.numOfReviews = reviews.length;
+    product.ratings = reviews.length > 0
+        ? parseFloat((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1))
+        : 0;
+    await product.save();
+};
+
 
 // add review to product
 
@@ -41,7 +51,7 @@ export const addreveiw = async (req, res) => {
             comment: message,
             reviewId: review._id
         });
-        await product.save();
+        await syncProductRatings(product);
 
         res.status(200).json({
             success: true,
@@ -92,7 +102,7 @@ export const editreview = async (req, res) => {
             if (reviewIndex !== -1) {
                 if (message) product.reviews[reviewIndex].comment = message;
                 if (rating) product.reviews[reviewIndex].rating = rating;
-                await product.save();
+                await syncProductRatings(product);
             }
         }
 
@@ -130,7 +140,7 @@ export const deleteReview = async (req, res) => {
                 product.reviews = product.reviews.filter(
                     (r) => r.user.toString() !== review.user.toString()
                 );
-                await product.save();
+                await syncProductRatings(product);
             }
             await Review.findByIdAndDelete(_id);
         } else {
@@ -158,7 +168,7 @@ export const deleteReview = async (req, res) => {
 
                     // Remove subdocument from product
                     product.reviews = product.reviews.filter(r => r._id.toString() !== _id);
-                    await product.save();
+                    await syncProductRatings(product);
                 } else {
                     return res.status(404).json({
                         success: false,

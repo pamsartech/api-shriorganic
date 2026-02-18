@@ -12,7 +12,7 @@ const router = express.Router();
 
 // User routes
 // router.post("/order", authMiddelware, createRazorpayOrder);
-// router.post("/verify", authMiddelware, verifyRazorpayPayment);
+router.post("/verify", authMiddelware, verifyRazorpayPayment);
 
 // Admin routes
 router.get("/payments", adminAuthMiddelware, fetchAllPayments);

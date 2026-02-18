@@ -440,3 +440,118 @@ export const removequantity = async (req, res) => {
     }
 }
 
+
+// update the size/variation of a cart item (e.g. 100ml → 200ml, S → M)
+// Only send newSize — current size is auto-read from the cart
+export const updateCartItemSize = async (req, res) => {
+    try {
+        const cacheKey = `cart:${req.user._id}`;
+        const { productId } = req.params;
+        const { newSize } = req.body;
+
+        if (!newSize) {
+            return res.status(400).json({
+                sucess: false,
+                message: "Please provide newSize"
+            });
+        }
+
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({
+                sucess: false,
+                message: "User not found"
+            });
+        }
+
+        const cart = await Cart.findOne({ user: user._id }).populate("cartItems.product");
+        if (!cart) {
+            return res.status(404).json({
+                sucess: false,
+                message: "Cart not found"
+            });
+        }
+
+        // Find the cart item by productId — current size is read from it
+        const cartItemIdx = cart.cartItems.findIndex(item =>
+            item.product._id.toString() === productId
+        );
+
+        if (cartItemIdx === -1) {
+            return res.status(404).json({
+                sucess: false,
+                message: "Product not found in cart"
+            });
+        }
+
+        const cartItem = cart.cartItems[cartItemIdx];
+        const currentSize = cartItem.size; // auto-read from cart
+
+        if (currentSize === newSize) {
+            return res.status(400).json({
+                sucess: false,
+                message: "New size is the same as the current size"
+            });
+        }
+
+        const product = cartItem.product;
+
+        // Validate the new size exists and is in stock
+        if (product.sizes && product.sizes.length > 0) {
+            const newSizeInfo = product.sizes.find(s => s.size === newSize);
+            if (!newSizeInfo) {
+                return res.status(400).json({
+                    sucess: false,
+                    message: `Size "${newSize}" does not exist for this product`
+                });
+            }
+            if (newSizeInfo.stock === false) {
+                return res.status(400).json({
+                    sucess: false,
+                    message: `Size "${newSize}" is out of stock`
+                });
+            }
+        }
+
+        const currentQuantity = cartItem.quantity;
+
+        // Check if the new size already exists in the cart for the same product
+        const existingNewSizeIdx = cart.cartItems.findIndex(item =>
+            item.product._id.toString() === productId && item.size === newSize
+        );
+
+        if (existingNewSizeIdx !== -1) {
+            // Merge quantities into the existing new-size item
+            cart.cartItems[existingNewSizeIdx].quantity += currentQuantity;
+            cart.cartItems.splice(cartItemIdx, 1);
+        } else {
+            // Just update the size in place
+            cart.cartItems[cartItemIdx].size = newSize;
+        }
+
+        cart.totalAmount = calculateTotalPrice(cart.cartItems);
+        await cart.save();
+
+        // Fetch recommendations
+        const cartProductIds = cart.cartItems.map(item => item.product?._id).filter(Boolean);
+        const recommendations = await Product.find({
+            _id: { $nin: cartProductIds },
+            isActive: true,
+            is_deleted: false
+        }).limit(4).sort({ ratings: -1 });
+
+        await redisClient.del(cacheKey);
+
+        res.status(200).json({
+            sucess: true,
+            message: `Size updated from "${currentSize}" to "${newSize}" successfully`,
+            cart,
+            recommendations
+        });
+    } catch (error) {
+        res.status(400).json({
+            sucess: false,
+            message: error.message
+        });
+    }
+};

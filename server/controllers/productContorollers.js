@@ -134,9 +134,17 @@ export const getproduct = async (req, res) => {
             _id: { $ne: product._id }
         }).limit(4);
 
+        // Compute live from reviews array (stored ratings/numOfReviews may be stale)
+        const productObj = product.toObject();
+        const reviews = productObj.reviews || [];
+        productObj.totalReviews = reviews.length;
+        productObj.avgRating = reviews.length > 0
+            ? parseFloat((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1))
+            : 0;
+
         res.status(200).json({
             success: true,
-            product: product,
+            product: productObj,
             remondedProducts: similarProducts,
             message: "Product fetched successfully !!"
         })
@@ -154,15 +162,27 @@ export const getproduct = async (req, res) => {
 export const getallproducts = async (req, res) => {
     try {
         const products = await Product.find()
-            .select("name images is_certified category product_description product_details sizes isActive");
+            .select("name images is_certified category product_description product_details sizes isActive reviews");
 
         const productsWithPrice = products.map(product => {
             const productObj = product.toObject();
+
+            // Price from first size
             if (productObj.sizes && productObj.sizes.length > 0) {
                 productObj.price = productObj.sizes[0].price;
             } else {
                 productObj.price = 0;
             }
+
+            // Compute live from reviews array (stored ratings/numOfReviews may be stale)
+            const reviews = productObj.reviews || [];
+            productObj.totalReviews = reviews.length;
+            productObj.avgRating = reviews.length > 0
+                ? parseFloat((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1))
+                : 0;
+
+            delete productObj.reviews; // keep response lean
+
             return productObj;
         });
 
@@ -180,6 +200,7 @@ export const getallproducts = async (req, res) => {
         });
     }
 };
+
 
 // to edit the product
 export const updateproduct = async (req, res) => {
@@ -279,7 +300,7 @@ export const changeProductStatus = async (req, res) => {
 export const bulkDeleteProduct = async (req, res) => {
     try {
         const { ids } = req.body;
-        const products = await Product.updateMany({ _id: { $in: ids } }, { is_deleted: true });
+        const products = await Product.deleteMany({ _id: { $in: ids } });
         res.status(200).json({
             success: true,
             products,
@@ -448,3 +469,59 @@ export const addCertifiedProduct = async (req, res) => {
         })
     }
 }
+
+export const search = async (req, res) => {
+    try {
+        const { name } = req.query;
+
+        const query = {};
+
+        if (name && name.trim() !== "") {
+            query.name = { $regex: name.trim(), $options: "i" };
+        }
+
+        const products = await Product.find(query)
+            .select("name images is_certified category product_description product_details sizes isActive");
+
+        const productsWithPrice = products.map(product => {
+            const productObj = product.toObject();
+            if (productObj.sizes && productObj.sizes.length > 0) {
+                productObj.price = productObj.sizes[0].price;
+            } else {
+                productObj.price = 0;
+            }
+            return productObj;
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Products fetched successfully !!",
+            totalProducts: productsWithPrice.length,
+            products: productsWithPrice,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+//  delete bulk prodcuts
+
+export const deleteBulkProducts = async (req, res) => {
+    try {
+        const { ids } = req.body;
+        const products = await Product.deleteMany({ _id: { $in: ids } });
+        res.status(200).json({
+            success: true,
+            products,
+            message: "Products deleted successfully !!",
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};

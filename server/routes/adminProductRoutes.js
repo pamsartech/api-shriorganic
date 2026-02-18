@@ -2,7 +2,7 @@
 import express from "express";
 import { adminAuthMiddelware } from "../middlewares/auth.js";
 
-import { addproduct, updateproduct, getallproducts, getproduct, deleteproduct, searchproduct, changeProductStatus, bulkDeleteProduct, deleteHardDeletedProducts, softDeleteProduct, addCertifiedProduct } from "../controllers/productContorollers.js";
+import { addproduct, updateproduct, getallproducts, getproduct, deleteproduct, searchproduct, changeProductStatus, bulkDeleteProduct, deleteBulkProducts, deleteHardDeletedProducts, softDeleteProduct, addCertifiedProduct } from "../controllers/productContorollers.js";
 
 const router = express.Router();
 import upload from "../middlewares/multer.js";
@@ -15,7 +15,7 @@ router.post("/new", upload.fields([
 ]), adminAuthMiddelware, addproduct);
 router.get("/:id", adminAuthMiddelware, getproduct);
 router.put("/:id", adminAuthMiddelware, updateproduct);
-router.delete("/bulk-delete", adminAuthMiddelware, bulkDeleteProduct);
+router.delete("/bulk", adminAuthMiddelware, deleteBulkProducts);
 router.delete("/:id", adminAuthMiddelware, deleteproduct);
 router.get("/search/:keyword", adminAuthMiddelware, searchproduct);
 router.delete("/hard-delete/:id", adminAuthMiddelware, deleteHardDeletedProducts);

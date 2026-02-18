@@ -30,6 +30,14 @@ export const signin = async (req, res) => {
             });
         }
         else {
+            // Block login if account is deactivated
+            if (user[0].isActive === false) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Your account has been deactivated. Please contact support."
+                });
+            }
+
             const payload = {
                 _id: user[0]._id,
                 Email: user[0].Email,
@@ -432,6 +440,9 @@ export const updateProfile = async (req, res) => {
         }
 
         await user.save();
+
+        // Clear the dashboard cache so updated profile is reflected immediately
+        await redisClient.del(`dashboard:${userId}`);
 
         res.status(200).json({
             success: true,
