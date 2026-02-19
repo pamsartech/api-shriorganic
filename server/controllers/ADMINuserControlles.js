@@ -7,15 +7,15 @@ import redisClient from "../config/redisClient.js";
 export const getusers = async (req, res) => {
     try {
 
-        const cacheKey = `users:${req.admin.id}`;
-        const cachedUsers = await redisClient.get(cacheKey);
-        if (cachedUsers) {
-            return res.status(200).json({
-                success: true,
-                message: "List of all the users details",
-                data: JSON.parse(cachedUsers)
-            });
-        }
+        // const cacheKey = `users:${req.admin.id}`;
+        // const cachedUsers = await redisClient.get(cacheKey);
+        // if (cachedUsers) {
+        //     return res.status(200).json({
+        //         success: true,
+        //         message: "List of all the users details",
+        //         data: JSON.parse(cachedUsers)
+        //     });
+        // }
 
         const allUsers = await User.find({ is_deleted: false }).select("-Password").lean();
 
@@ -46,6 +46,8 @@ export const getusers = async (req, res) => {
             totalOrders: statsMap[String(user._id)]?.totalOrders || 0,
             totalSpend: statsMap[String(user._id)]?.totalSpend || 0
         }));
+
+
 
         await redisClient.setEx(cacheKey, 3600, JSON.stringify(enrichedUsers));
         res.status(200).json({

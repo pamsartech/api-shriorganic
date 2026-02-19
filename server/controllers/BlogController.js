@@ -6,13 +6,9 @@ import redisClient from "../config/redisClient.js";
 export const createBlog = async (req, res) => {
     try {
         const { title, description, type, category } = req.body;
-        // Assuming req.user is set by authentication middleware
-
         let createdBy = null;
         if (req.user) {
-            // Check for _id or id in the decoded token
             const userId = req.user._id || req.user.id;
-            // Only assign if it looks like a valid ObjectId (24 hex characters)
             if (userId && /^[0-9a-fA-F]{24}$/.test(userId)) {
                 createdBy = userId;
             }
