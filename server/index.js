@@ -34,8 +34,8 @@ const PORT = process.env.PORT || 4001;
 // later has to change it to the domain name
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://shri-organic.netlify.app/"
-
+  "https://shri-organic.netlify.app/",
+  "https://shriorganic.com/"
 ];
 
 const corsOptions = {
