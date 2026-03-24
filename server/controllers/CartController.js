@@ -26,115 +26,108 @@ const calculateTotalPrice = (cartItems) => {
 }
 
 export const addproducttocart = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { size, quantity = 1 } = req.body; // ✅ FIXED
 
-    try {
+    const user = await User.findById(req.user._id);
+    const cacheKey = `cart:${req.user._id}`;
 
-        const { productId } = req.params;
-        const { size } = req.body;
-
-        console.log(req.user._id);
-        console.log(size);
-
-
-        const user = await User.findById(req.user._id);
-
-        const cacheKey = `cart:${req.user._id}`;
-
-        if (!user) {
-            return res.status(404).json({
-                sucess: false,
-                message: "Please login !!!"
-            })
-        }
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({
-                sucess: false,
-                message: "Product not found"
-            })
-        }
-
-        // Validate size if product has sizes
-        if (product.sizes && product.sizes.length > 0) {
-            if (!size) {
-                return res.status(400).json({
-                    sucess: false,
-                    message: "Please select a size"
-                })
-            }
-            const sizeExists = product.sizes.find(s => s.size === size && s.stock === true);
-
-            console.log(sizeExists);
-            if (!sizeExists) {
-                return res.status(400).json({
-                    sucess: false,
-                    message: "Selected size is not available"
-                })
-            }
-        }
-
-        const cart = await Cart.findOne({ user: user._id });
-        if (!cart) {
-            const newCart = new Cart({
-                user: user._id,
-                cartItems: [{
-                    product: product._id,
-                    quantity: 1,
-                    size: size
-                }]
-            })
-            await newCart.save();
-        }
-        else {
-            // Check if product with same ID AND same size exists
-            const cartItem = cart.cartItems.find(item =>
-                item.product.toString() === productId && item.size === size
-            );
-
-            if (cartItem) {
-                cartItem.quantity += 1;
-            }
-            else {
-                cart.cartItems.push({
-                    product: product._id,
-                    quantity: 1,
-                    size: size
-                })
-            }
-            await cart.save();
-        }
-
-
-
-        const finalCart = await Cart.findOne({ user: user._id }).populate("cartItems.product");
-
-        finalCart.totalAmount = calculateTotalPrice(finalCart.cartItems);
-        await finalCart.save();
-
-        // Fetch recommendations
-        const cartProductIds = finalCart.cartItems.map(item => item.product?._id).filter(Boolean);
-        const recommendations = await Product.find({
-            _id: { $nin: cartProductIds },
-            isActive: true,
-            is_deleted: false
-        }).limit(4).sort({ ratings: -1 });
-
-        await redisClient.del(cacheKey);
-
-        res.status(200).json({
-            sucess: true,
-            message: `${product.name} added to cart`,
-            cart: finalCart,
-            recommendations
-        })
-
-    } catch (error) {
-        res.status(400).json({
-            sucess: false,
-            message: error.message
-        })
+    if (!user) {
+      return res.status(404).json({
+        sucess: false,
+        message: "Please login !!!"
+      });
     }
-}
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        sucess: false,
+        message: "Product not found"
+      });
+    }
+
+    // size validation (unchanged)
+    if (product.sizes && product.sizes.length > 0) {
+      if (!size) {
+        return res.status(400).json({
+          sucess: false,
+          message: "Please select a size"
+        });
+      }
+
+      const sizeExists = product.sizes.find(
+        s => s.size === size && s.stock === true
+      );
+
+      if (!sizeExists) {
+        return res.status(400).json({
+          sucess: false,
+          message: "Selected size is not available"
+        });
+      }
+    }
+
+    let cart = await Cart.findOne({ user: user._id });
+
+    if (!cart) {
+      cart = new Cart({
+        user: user._id,
+        cartItems: [{
+          product: product._id,
+          quantity, // ✅ FIXED
+          size
+        }]
+      });
+    } else {
+      const cartItem = cart.cartItems.find(item =>
+        item.product.toString() === productId && item.size === size
+      );
+
+      if (cartItem) {
+        cartItem.quantity += quantity; // ✅ FIXED
+      } else {
+        cart.cartItems.push({
+          product: product._id,
+          quantity, // ✅ FIXED
+          size
+        });
+      }
+    }
+
+    await cart.save();
+
+    const finalCart = await Cart.findOne({ user: user._id })
+      .populate("cartItems.product");
+
+    finalCart.totalAmount = calculateTotalPrice(finalCart.cartItems);
+    await finalCart.save();
+
+    const cartProductIds = finalCart.cartItems.map(item => item.product?._id).filter(Boolean);
+
+    const recommendations = await Product.find({
+      _id: { $nin: cartProductIds },
+      isActive: true,
+      is_deleted: false
+    }).limit(4).sort({ ratings: -1 });
+
+    await redisClient.del(cacheKey);
+
+    res.status(200).json({
+      sucess: true,
+      message: `${product.name} added to cart`,
+      cart: finalCart,
+      recommendations
+    });
+
+  } catch (error) {
+    res.status(400).json({
+      sucess: false,
+      message: error.message
+    });
+  }
+};
 
 
 // to get the cart with the details
