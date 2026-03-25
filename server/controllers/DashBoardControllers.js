@@ -71,10 +71,30 @@ export const getSalesTrend = async (req, res) => {
             { $sort: { "_id": 1 } }
         ]);
 
-        res.status(200).json({
-            success: true,
-            data: trend
-        });
+          // days mapping
+    const resultMap = new Map();
+    trend.forEach((item) => {
+      resultMap.set(item._id, item.sales);
+    });
+
+    const full7Days = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+
+      const formattedDate = date.toLocaleDateString("en-CA");
+
+      full7Days.push({
+        _id: formattedDate,
+        sales: resultMap.get(formattedDate) || 0,
+      });
+    }
+     
+    res.status(200).json({
+  success: true,
+  data: full7Days
+});
     } catch (error) {
         res.status(500).json({
             success: false,
