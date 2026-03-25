@@ -149,6 +149,7 @@ export const placeOrder = async (req, res) => {
             cartItems: cartItems,
             totalPrice: totalPrice,
             paymentMethod: paymentMethod,
+            paymentstatus: "Pending", 
             razorpayOrderId: razorpayOrder ? razorpayOrder.id : null,
             address: orderAddress,
             deliveryDetails: {
@@ -445,42 +446,50 @@ export const searchOrderById = async (req, res) => {
 
 // to verify payment 
 export const verifyPayment = async (req, res) => {
-    try {
-        const {
-            razorpay_order_id,
-            razorpay_payment_id,
-            razorpay_signature,
-        } = req.body;
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-        console.log(req.body);
-        const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
 
-        const expectedSignature = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-            .update(body)
-            .digest("hex");
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest("hex");
 
-        if (expectedSignature === razorpay_signature) {
-            res.status(200).json({
-                success: true,
-                message: "Payment verified and order updated"
-            });
+    if (expectedSignature === razorpay_signature) {
 
-        } else {
-            res.status(400).json({
-                success: false,
-                message: "Invalid signature"
-            });
-        }
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({
-            success: false,
-            message: "Payment verification failed",
-            error: error.message
-        });
+      // ✅ UPDATE ORDER HERE
+      const order = await Order.findOneAndUpdate(
+        { razorpayOrderId: razorpay_order_id },
+        {
+          paymentstatus: "Paid",
+          razorpayPaymentId: razorpay_payment_id
+        },
+        { new: true }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Payment verified and order updated",
+        order
+      });
+
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid signature"
+      });
     }
-}
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Payment verification failed",
+      error: error.message
+    });
+  }
+};
 
 // to get recent orders of the user
 export const getRecentOrders = async (req, res) => {
