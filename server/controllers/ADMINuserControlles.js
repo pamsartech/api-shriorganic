@@ -21,12 +21,7 @@ export const getusers = async (req, res) => {
 
         // Aggregate order stats per user
         const orderStats = await Order.aggregate([
-             {
-        $match: {
-          is_deleted: false,
-          paymentstatus: { $in: ["Paid", "paid", "SUCCESS", "success"] },
-        },
-      },
+        { $match: { is_deleted: false, paymentstatus: "Paid" } },
             {
                 $group: {
                     _id: "$user",
