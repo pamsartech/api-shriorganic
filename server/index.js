@@ -35,7 +35,8 @@ const PORT = process.env.PORT || 4001;
 const allowedOrigins = [
   "http://localhost:5173",
   "https://shri-organic.netlify.app/",
-  "https://shriorganic.com/"
+  "https://shriorganic.com/",
+  "https://admin.shriorganic.com/"
 ];
 
 const corsOptions = {
