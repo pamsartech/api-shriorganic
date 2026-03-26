@@ -12,10 +12,13 @@ const authenticate = async () => {
         const email = process.env.SHIPROCKET_EMAIL;
         const password = process.env.SHIPROCKET_PASSWORD;
 
+        // 🔍 Validate env
         if (!email || !password) {
-            console.error("Shiprocket credentials missing");
+            console.error("❌ Shiprocket credentials missing in ENV");
             return null;
         }
+
+        console.log("🔐 Attempting Shiprocket login...");
 
         const response = await fetch(
             "https://apiv2.shiprocket.in/v1/external/auth/login",
@@ -23,25 +26,47 @@ const authenticate = async () => {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "Accept": "application/json",
                 },
                 body: JSON.stringify({ email, password }),
             }
         );
 
-        const data = await response.json();
+        // 🧠 Read raw response first (important for debugging)
+        const rawText = await response.text();
+        console.log("📦 Raw Shiprocket Response:", rawText);
 
-        console.log("Shiprocket login response:", data);
-
-        if (!response.ok || !data.token) {
-            console.error("Login failed:", data);
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch (err) {
+            console.error("❌ Failed to parse JSON response");
             return null;
         }
 
+        console.log("📊 Status:", response.status);
+        console.log("📊 Parsed Response:", data);
+
+        // ❌ If login failed
+        if (!response.ok || !data.token) {
+            console.error("❌ Shiprocket login failed:", {
+                status: response.status,
+                message: data?.message || "Unknown error",
+                errors: data?.errors || null
+            });
+            return null;
+        }
+
+        // ✅ Success
+        console.log("✅ Shiprocket login successful");
+
+        // Store token in Redis (1 day expiry)
         await redisClient.setEx("shiprocket_token", 86400, data.token);
 
         return data.token;
+
     } catch (error) {
-        console.error("Shiprocket login error:", error);
+        console.error("❌ Shiprocket authentication error:", error.message);
         return null;
     }
 };
