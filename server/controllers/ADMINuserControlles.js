@@ -5,30 +5,39 @@ import redisClient from "../config/redisClient.js";
 // To Get The all the users in admin side
 export const getusers = async (req, res) => {
   try {
-    const cacheKey = `users:${req.admin.id}`;
-    const cachedUsers = await redisClient.get(cacheKey);
-    if (cachedUsers) {
-      return res.status(200).json({
-        success: true,
-        message: "List of all the users details",
-        data: JSON.parse(cachedUsers),
-      });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const cacheKey = `users:${page}:${limit}`;
+
+    // 🔹 Cache check
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
     }
 
-    const allUsers = await User.find({ is_deleted: false })
-      .sort({ createdAt: -1 })
-      .select("-Password")
-      .lean();
+    // 🔹 Run queries in parallel
+    const [users, totalCount] = await Promise.all([
+      User.find({ is_deleted: false })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select("-Password")
+        .lean(),
 
-    // Aggregate order stats per user
-    const userIds = allUsers.map((u) => u._id);
+      User.countDocuments({ is_deleted: false }),
+    ]);
 
+    const userIds = users.map((u) => u._id);
+
+    // 🔹 Aggregation ONLY for paginated users
     const orderStats = await Order.aggregate([
       {
         $match: {
           user: { $in: userIds },
           is_deleted: false,
-          paymentstatus: { $in: ["Paid", "SUCCESS"] },
+          paymentstatus: { $in: ["paid", "success"] },
         },
       },
       {
@@ -40,80 +49,61 @@ export const getusers = async (req, res) => {
       },
     ]);
 
-    // Build a quick lookup map: userId -> { totalOrders, totalSpend }
-    const statsMap = {};
-    for (const stat of orderStats) {
-      statsMap[String(stat._id)] = {
-        totalOrders: stat.totalOrders,
-        totalSpend: stat.totalSpend,
-      };
-    }
+    // 🔹 Map stats
+    const statsMap = Object.fromEntries(
+      orderStats.map((s) => [
+        String(s._id),
+        { totalOrders: s.totalOrders, totalSpend: s.totalSpend },
+      ])
+    );
 
-    // Merge stats into each user
-    const enrichedUsers = allUsers.map((user) => ({
+    const enrichedUsers = users.map((user) => ({
       ...user,
       totalOrders: statsMap[String(user._id)]?.totalOrders || 0,
       totalSpend: statsMap[String(user._id)]?.totalSpend || 0,
     }));
 
-    await redisClient.setEx(cacheKey, 3600, JSON.stringify(enrichedUsers));
-    res.status(200).json({
+    const response = {
       success: true,
-      message: "List of all the users details",
+      page,
+      totalPages: Math.ceil(totalCount / limit),
+      totalUsers: totalCount,
       data: enrichedUsers,
-    });
-  } catch (error) {
-    console.log(error);
+    };
 
-    res.status(500).json({
-      success: false,
-      error: error,
-      message: "failed to fetch the users !!",
-    });
+    // 🔹 Cache result
+    await redisClient.setEx(cacheKey, 600, JSON.stringify(response));
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Failed to fetch users" });
   }
 };
+
 
 // To get the user details by the user id
 export const getUserById = async (req, res) => {
   try {
     const { userId } = req.params;
-
     const cacheKey = `user:${userId}`;
-    const cachedUser = await redisClient.get(cacheKey);
-    if (cachedUser) {
-      return res.status(200).json({
-        success: true,
-        message: "User details",
-        data: JSON.parse(cachedUser),
-      });
-    }
 
-    const userDetails = await User.findOne({ _id: userId })
+    const cached = await redisClient.get(cacheKey);
+    if (cached) return res.status(200).json(JSON.parse(cached));
+
+    const user = await User.findById(userId)
       .select("-Password")
       .lean();
 
-    await redisClient.setEx(cacheKey, 3600, JSON.stringify(userDetails));
-
-    if (!userDetails) {
-      res.status(404).json({
-        success: false,
-        message: " User Not Found !",
-      });
-    } else {
-      res.status(200).json({
-        success: true,
-        message: "user details",
-        data: userDetails,
-      });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
     }
-  } catch (error) {
-    console.log("user Fetch Error", error);
 
-    res.status(400).json({
-      success: false,
-      error: "error",
-      message: error,
-    });
+    await redisClient.setEx(cacheKey, 1800, JSON.stringify(user));
+
+    res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -121,34 +111,22 @@ export const getUserById = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { name, email, role } = req.body;
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { name, email, role },
-      { new: true },
-    );
+      req.body,
+      { new: true }
+    ).lean();
 
-    // Invalidate caches
-    await Promise.all([
-      redisClient.del(`user:${userId}`),
-      redisClient.del(`users:${req.admin.id}`),
-    ]);
-    // await redisClient.del(`user:${userId}`);
-    // await redisClient.del(`users:${req.admin.id}`);
+    await invalidateUserCache(userId);
 
     res.status(200).json({
       success: true,
-      message: "User updated successfully",
+      message: "User updated",
       data: updatedUser,
     });
   } catch (error) {
-    console.log("user update Error", error);
-
-    res.status(400).json({
-      success: false,
-      error: "error",
-      message: error,
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -156,29 +134,18 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const deletedUser = await User.findByIdAndDelete(userId);
 
-    // Invalidate caches
-    await Promise.all([
-      redisClient.del(`user:${userId}`),
-      redisClient.del(`users:${req.admin.id}`),
-    ]);
-    // await redisClient.del(`user:${userId}`);
-    // await redisClient.del(`users:${req.admin.id}`);
+    const deletedUser = await User.findByIdAndDelete(userId).lean();
+
+    await invalidateUserCache(userId);
 
     res.status(200).json({
       success: true,
-      message: "User deleted successfully",
+      message: "User deleted",
       data: deletedUser,
     });
   } catch (error) {
-    console.log("user delete Error", error);
-
-    res.status(400).json({
-      success: false,
-      error: "error",
-      message: error,
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -186,33 +153,22 @@ export const deleteUser = async (req, res) => {
 export const softDeleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const softDeletedUser = await User.findByIdAndUpdate(
+
+    const user = await User.findByIdAndUpdate(
       userId,
       { is_deleted: true },
-      { new: true },
-    );
+      { new: true }
+    ).lean();
 
-    // Invalidate caches
-    await Promise.all([
-      redisClient.del(`user:${userId}`),
-      redisClient.del(`users:${req.admin.id}`),
-    ]);
-    // await redisClient.del(`user:${userId}`);
-    // await redisClient.del(`users:${req.admin.id}`);
+    await invalidateUserCache(userId);
 
     res.status(200).json({
       success: true,
-      message: "User soft deleted successfully",
-      data: softDeletedUser,
+      message: "User soft deleted",
+      data: user,
     });
   } catch (error) {
-    console.log("user soft delete Error", error);
-
-    res.status(400).json({
-      success: false,
-      error: "error",
-      message: error,
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -222,34 +178,19 @@ export const bulkDeleteUser = async (req, res) => {
   try {
     const { UserIds } = req.body;
 
-    // Changed to soft delete (update is_deleted to true)
-    const bulkAction = await User.updateMany(
+    await User.updateMany(
       { _id: { $in: UserIds } },
-      { is_deleted: true },
+      { is_deleted: true }
     );
 
-    // Invalidate caches
-    if (UserIds && UserIds.length > 0) {
-      await Promise.all(UserIds.map((id) => redisClient.del(`user:${id}`)));
-      // for (const id of UserIds) {
-      //   await redisClient.del(`user:${id}`);
-      // }
-    }
-    await redisClient.del(`users:${req.admin.id}`);
+    await Promise.all(UserIds.map((id) => invalidateUserCache(id)));
 
     res.status(200).json({
       success: true,
-      message: "Users bulk soft deleted successfully",
-      data: bulkAction,
+      message: "Users soft deleted",
     });
   } catch (error) {
-    console.log("user bulk soft delete Error", error);
-
-    res.status(400).json({
-      success: false,
-      error: "error",
-      message: error,
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -259,44 +200,24 @@ export const makeUserActive = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Find the user to get current status
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    // Toggle the status
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { isActive: !user.isActive },
-      { new: true },
-    );
+      [{ $set: { isActive: { $not: "$isActive" } } }],
+      { new: true }
+    ).lean();
 
-    // Invalidate caches
-    const cacheKeyUser = `user:${userId}`;
-    const cacheKeyList = `users:${req.admin.id}`;
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-    await redisClient.del(cacheKeyUser);
-    await redisClient.del(cacheKeyList);
+    await invalidateUserCache(userId);
 
     res.status(200).json({
       success: true,
-      message: updatedUser.isActive
-        ? "User Blocked successfully"
-        : "User Unblocked successfully",
+      message: updatedUser.isActive ? "User blocked" : "User unblocked",
       data: updatedUser,
     });
   } catch (error) {
-    console.log("user status toggle Error", error);
-
-    res.status(400).json({
-      success: false,
-      error: "error",
-      message: error.message || error,
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
