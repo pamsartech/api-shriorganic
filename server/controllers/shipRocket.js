@@ -12,65 +12,69 @@ const authenticate = async () => {
         const email = process.env.SHIPROCKET_EMAIL;
         const password = process.env.SHIPROCKET_PASSWORD;
 
-        // 🔍 Validate env
         if (!email || !password) {
-            console.error("❌ Shiprocket credentials missing in ENV");
+            console.error("Shiprocket credentials not found in environment variables");
             return null;
         }
 
-        console.log("🔐 Attempting Shiprocket login...");
+        console.log(`Attempting Shiprocket login for: ${email} via ${SHIPROCKET_API_URL}`);
 
-        const response = await fetch(
-            "https://apiv2.shiprocket.in/v1/external/auth/login",
-            {
+        const headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        };
+
+        let response = await fetch(`${SHIPROCKET_API_URL}/auth/login`, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({ email, password })
+        });
+
+        // Fallback for 403 Forbidden (Try apiv2 endpoint)
+        if (response.status === 403) {
+            console.warn("403 Forbidden on api.shiprocket.in, trying apiv2.shiprocket.in...");
+            const ALT_URL = "https://apiv2.shiprocket.in/v1/external";
+            response = await fetch(`${ALT_URL}/auth/login`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                body: JSON.stringify({ email, password }),
-            }
-        );
-
-        // 🧠 Read raw response first (important for debugging)
-        const rawText = await response.text();
-        console.log("📦 Raw Shiprocket Response:", rawText);
-
-        let data;
-        try {
-            data = JSON.parse(rawText);
-        } catch (err) {
-            console.error("❌ Failed to parse JSON response");
-            return null;
-        }
-
-        console.log("📊 Status:", response.status);
-        console.log("📊 Parsed Response:", data);
-
-        // ❌ If login failed
-        if (!response.ok || !data.token) {
-            console.error("❌ Shiprocket login failed:", {
-                status: response.status,
-                message: data?.message || "Unknown error",
-                errors: data?.errors || null
+                headers: headers,
+                body: JSON.stringify({ email, password })
             });
+        }
+
+        const contentType = response.headers.get("content-type");
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Shiprocket HTTP Error: ${response.status} ${response.statusText}`);
+            console.error(`Response Type: ${contentType}`);
+            console.error("Response body snippet:", errorText.substring(0, 300));
             return null;
         }
 
-        // ✅ Success
-        console.log("✅ Shiprocket login successful");
-
-        // Store token in Redis (1 day expiry)
-        await redisClient.setEx("shiprocket_token", 86400, data.token);
-
-        return data.token;
-
+        if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            if (data.token) {
+                console.log("Shiprocket authenticated successfully");
+                // Store token in Redis with an expiry (Shiprocket tokens usually last 24h/10 days)
+                await redisClient.setEx("shiprocket_token", 86400, data.token);
+                return data.token;
+            } else {
+                console.error("Shiprocket login failed (JSON):", data);
+                return null;
+            }
+        } else {
+            const text = await response.text();
+            console.error("Shiprocket returned non-JSON response. Check API user permissions.");
+            console.error("Response snippet:", text.substring(0, 300));
+            return null;
+        }
     } catch (error) {
-        console.error("❌ Shiprocket authentication error:", error.message);
+        console.error("Internal Shiprocket Login Error:", error);
         return null;
     }
 };
-
 /**
  * @desc    Get a valid token from Redis or trigger an auto-login
  */
